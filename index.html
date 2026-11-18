@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Sombras Finitas</title>
+  <meta name="description" content="Videojuego de sigilo y deducción para aprender Autómatas Finitos Deterministas.">
+  <meta name="theme-color" content="#120a0d">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icono.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icono-192.png">
+  <link rel="stylesheet" href="css/estilos.css">
+</head>
+<body>
+<div id="app">
+  <div id="anuncio" class="solo-lector" aria-live="polite" role="status"></div>
+
+  <!-- INICIO -->
+  <section id="pantalla-inicio" class="pantalla activa" aria-labelledby="titulo-inicio">
+    <div class="inicio-fondo" aria-hidden="true"></div>
+    <header class="inicio-cab">
+      <span id="chip-conexion" class="chip" role="status">Comprobando…</span>
+      <button class="btn-icono" id="btn-sonido" aria-label="Sonido activado" aria-pressed="true" type="button"></button>
+    </header>
+    <div class="inicio-centro">
+      <svg class="logo" viewBox="0 0 120 120" aria-hidden="true">
+        <circle cx="60" cy="60" r="50" fill="none" stroke="var(--gold)" stroke-width="3"/>
+        <circle cx="60" cy="60" r="40" fill="var(--panel2)" stroke="var(--gold)" stroke-width="3"/>
+        <path d="M6 60 H 18 M 12 54 L 18 60 L 12 66" fill="none" stroke="var(--red-2)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="60" cy="52" r="9" fill="var(--red)"/>
+        <path d="M42 84 Q60 56 78 84 Z" fill="var(--red)"/>
+      </svg>
+      <h1 id="titulo-inicio">Sombras <em>Finitas</em></h1>
+      <p class="lema">Deduce el autómata oculto. Cruza sin ser visto.</p>
+    </div>
+    <nav class="menu" aria-label="Menú principal">
+      <button class="btn btn-primario btn-grande" id="btn-jugar" type="button">Jugar</button>
+      <div class="menu-fila">
+        <button class="btn" id="btn-niveles" type="button">Niveles</button>
+        <button class="btn" id="btn-cuaderno-inicio" type="button">Cuaderno</button>
+      </div>
+      <div class="menu-fila">
+        <button class="btn" id="btn-diagnostico" type="button">Diagnóstico</button>
+        <button class="btn" id="btn-ayuda" type="button">Cómo jugar</button>
+      </div>
+    </nav>
+    <footer class="pie">Teoría de la Computación · Universidad de Pamplona<br><span id="codigo-perfil" class="mono"></span></footer>
+  </section>
+
+  <!-- NIVELES -->
+  <section id="pantalla-niveles" class="pantalla" aria-labelledby="titulo-niveles">
+    <header class="barra">
+      <button class="btn-icono" data-ir="inicio" aria-label="Volver al inicio" type="button"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <h2 id="titulo-niveles">Niveles</h2><span></span>
+    </header>
+    <ol id="lista-niveles" class="lista-niveles"></ol>
+  </section>
+
+  <!-- JUEGO -->
+  <section id="pantalla-juego" class="pantalla" aria-label="Juego">
+    <header class="barra">
+      <button class="btn-icono" id="btn-pausa" aria-label="Pausa" type="button"><svg viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></svg></button>
+      <div class="barra-centro">
+        <h2 id="juego-titulo">Nivel 1</h2>
+        <div id="juego-sigma" class="sigma" aria-label="Alfabeto"></div>
+      </div>
+      <button class="btn-icono" id="btn-ir-cuaderno" aria-label="Abrir cuaderno" type="button"><svg viewBox="0 0 24 24"><path d="M6 3h12v18H6zM9 8h6M9 12h6M9 16h4"/></svg></button>
+    </header>
+    <div class="mapa-caja"><canvas id="lienzo-mapa" aria-label="Mapa por casillas"></canvas>
+      <div id="mapa-aviso" class="mapa-aviso" hidden></div>
+    </div>
+    <div class="obs" aria-label="Observaciones de los guardias">
+      <div class="obs-cab"><span>Bitácora de guardias</span><span id="obs-traza" class="mono"></span></div>
+      <div class="obs-tabla-caja"><table id="obs-tabla" class="obs-tabla"></table></div>
+    </div>
+    <div class="controles">
+      <div class="dpad" role="group" aria-label="Mover al jugador">
+        <button class="btn-tecla" data-mov="arriba" aria-label="Mover arriba" type="button"><svg viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg></button>
+        <button class="btn-tecla" data-mov="izquierda" aria-label="Mover a la izquierda" type="button"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
+        <button class="btn-tecla" data-mov="abajo" aria-label="Mover abajo" type="button"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
+        <button class="btn-tecla" data-mov="derecha" aria-label="Mover a la derecha" type="button"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+      </div>
+      <div class="senales">
+        <div id="juego-senales" class="senales-fila" role="group" aria-label="Emitir señal de entrada"></div>
+        <button class="btn btn-peq" id="btn-reiniciar-guardias" type="button">Reiniciar guardias (q₀)</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- CUADERNO -->
+  <section id="pantalla-cuaderno" class="pantalla" aria-labelledby="cuaderno-titulo">
+    <header class="barra">
+      <button class="btn-icono" id="btn-cuaderno-volver" aria-label="Volver" type="button"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <div class="barra-centro"><h2 id="cuaderno-titulo">Cuaderno</h2><div id="cuaderno-sub" class="sigma"></div></div>
+      <button class="btn-icono" id="btn-cuaderno-limpiar" aria-label="Vaciar cuaderno" type="button"><svg viewBox="0 0 24 24"><path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"/></svg></button>
+    </header>
+    <div class="cuaderno-scroll">
+      <p id="cuaderno-meta" class="meta"></p>
+      <div class="herramientas" id="herramientas" role="toolbar" aria-label="Herramientas del cuaderno">
+        <button class="herr" data-herr="estado" aria-pressed="true" type="button">Estado</button>
+        <button class="herr" data-herr="transicion" aria-pressed="false" type="button">Transición</button>
+        <button class="herr" data-herr="mover" aria-pressed="false" type="button">Mover</button>
+        <button class="herr" data-herr="inicial" aria-pressed="false" type="button">Inicial</button>
+        <button class="herr" data-herr="final" aria-pressed="false" type="button">Aceptación</button>
+        <button class="herr" data-herr="borrar" aria-pressed="false" type="button">Borrar</button>
+      </div>
+      <p id="herr-ayuda" class="ayuda-herr"></p>
+      <div class="lienzo-caja"><canvas id="lienzo-cuaderno" aria-label="Lienzo del diagrama de estados"></canvas></div>
+      <div id="selector-simbolo" class="selector" hidden>
+        <div id="selector-texto" class="selector-texto"></div>
+        <div id="selector-botones" class="selector-botones"></div>
+        <button class="btn btn-peq" id="selector-listo" type="button">Listo</button>
+      </div>
+      <h3 class="sub">Tabla de transición</h3>
+      <div class="tabla-caja"><table id="tabla-trans" class="tabla-trans"></table></div>
+      <h3 class="sub">Probar una cadena en tu diagrama</h3>
+      <form id="form-simular" class="simular" autocomplete="off">
+        <input id="simular-entrada" class="mono" type="text" inputmode="text" autocapitalize="off" spellcheck="false" placeholder="ej. abba (vacío = ε)" aria-label="Cadena a probar">
+        <button class="btn btn-peq" type="submit">Simular</button>
+      </form>
+      <div id="simular-salida" class="simular-salida" aria-live="polite"></div>
+      <div id="panel-equivalencia" class="panel-eq" hidden></div>
+      <div id="resultado" class="resultado" role="status" aria-live="polite" hidden></div>
+    </div>
+    <div class="cuaderno-pie">
+      <button class="btn btn-primario" id="btn-validar" type="button">Validar diagrama</button>
+    </div>
+  </section>
+
+  <!-- DIAGNÓSTICO -->
+  <section id="pantalla-diagnostico" class="pantalla" aria-labelledby="titulo-diag">
+    <header class="barra">
+      <button class="btn-icono" data-ir="inicio" aria-label="Volver al inicio" type="button"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <h2 id="titulo-diag">Diagnóstico</h2><span></span>
+    </header>
+    <div id="diag-cuerpo" class="diag-cuerpo"></div>
+  </section>
+
+  <!-- AYUDA -->
+  <section id="pantalla-ayuda" class="pantalla" aria-labelledby="titulo-ayuda">
+    <header class="barra">
+      <button class="btn-icono" data-ir="inicio" aria-label="Volver al inicio" type="button"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <h2 id="titulo-ayuda">Cómo jugar</h2><span></span>
+    </header>
+    <div class="ayuda-cuerpo">
+      <p>Los guardias son autómatas finitos deterministas <span class="mono">M = (Q, Σ, δ, q₀, F)</span> que no puedes ver. Solo observas su conducta.</p>
+      <ol class="pasos">
+        <li><b>Observa.</b> Cada <b>señal</b> que envías es un símbolo de Σ. Todos los guardias leen el símbolo y cambian de estado según su δ.</li>
+        <li><b>Un guardia en estado de aceptación (F) está <i>dormido</i></b> y no te detecta. En cualquier otro estado está <i>despierto</i> y detecta a quien esté a 2 casillas o menos (distancia Manhattan).</li>
+        <li><b>Las sombras</b> (casillas moradas) te ocultan aunque el guardia esté despierto.</li>
+        <li><b>Experimenta.</b> «Reiniciar guardias» los devuelve a q₀: así puedes probar cadenas desde el principio. La bitácora anota qué cadena produjo qué conducta.</li>
+        <li><b>Dibuja.</b> En el cuaderno crea estados, marca el inicial y los de aceptación y traza una transición por cada símbolo en cada estado (incluido el estado trampa).</li>
+        <li><b>Valida.</b> El motor compara tu diagrama con el autómata oculto. Si no coinciden te da una cadena que los distingue.</li>
+        <li><b>Huye.</b> Con el diagrama correcto la salida se abre. Llega a ella para superar el nivel.</li>
+      </ol>
+      <h3 class="sub">Controles</h3>
+      <ul class="controles-lista">
+        <li><kbd>←↑↓→</kbd> mover · tocar el mapa junto al jugador también mueve</li>
+        <li><kbd>a</kbd> <kbd>b</kbd> <kbd>c</kbd> emitir señal</li>
+        <li><kbd>r</kbd> reiniciar guardias · <kbd>n</kbd> cuaderno · <kbd>Esc</kbd> pausa</li>
+        <li>En el cuaderno: pulsación larga sobre un estado = alternar aceptación</li>
+      </ul>
+      <h3 class="sub">Leyenda</h3>
+      <div id="leyenda" class="leyenda"></div>
+    </div>
+  </section>
+
+  <!-- SUPERPOSICIONES -->
+  <div id="modal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="modal-titulo">
+    <div class="modal-hoja">
+      <h2 id="modal-titulo"></h2>
+      <div id="modal-cuerpo"></div>
+      <div id="modal-acciones" class="modal-acciones"></div>
+    </div>
+  </div>
+  <div id="toast" class="toast" hidden role="status"></div>
+</div>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

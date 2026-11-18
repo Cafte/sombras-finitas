@@ -1,0 +1,140 @@
+{
+  "version": 1,
+  "niveles": [
+    {
+      "numero": 1,
+      "nombre": "El vigía del pasillo",
+      "tipo_reto": "deduccion",
+      "alfabeto": ["a", "b"],
+      "historia": "Un solo guardia vigila el pasillo. Envía señales y observa cuándo se duerme. Deduce su autómata y dibújalo en el cuaderno.",
+      "concepto": "Estados, transiciones, estado inicial y estado de aceptación de un AFD pequeño.",
+      "objetivo": "A",
+      "automatas": {
+        "A": {
+          "estados": ["q0", "q1"],
+          "inicial": "q0",
+          "aceptacion": ["q1"],
+          "delta": { "q0": { "a": "q1", "b": "q0" }, "q1": { "a": "q1", "b": "q0" } }
+        }
+      },
+      "guardias": { "A": "A" },
+      "mapa": [
+        "###########",
+        "#....A....#",
+        "#P.s.....E#",
+        "###########"
+      ]
+    },
+    {
+      "numero": 2,
+      "nombre": "La trampa de los gemelos",
+      "tipo_reto": "deduccion",
+      "alfabeto": ["a", "b"],
+      "historia": "Dos guardias gemelos obedecen el mismo autómata. Hay cadenas que los duermen y cadenas que los dejan despiertos para siempre. Encuentra el estado trampa.",
+      "concepto": "Cadenas aceptadas y rechazadas, y detección de un estado trampa.",
+      "objetivo": "A",
+      "automatas": {
+        "A": {
+          "estados": ["q0", "q1", "q2", "qt"],
+          "inicial": "q0",
+          "aceptacion": ["q2"],
+          "delta": {
+            "q0": { "a": "q1", "b": "qt" },
+            "q1": { "a": "qt", "b": "q2" },
+            "q2": { "a": "q2", "b": "qt" },
+            "qt": { "a": "qt", "b": "qt" }
+          }
+        }
+      },
+      "guardias": { "A": "A", "B": "A" },
+      "mapa": [
+        "###########",
+        "#...A.B...#",
+        "#P.s.....E#",
+        "#.........#",
+        "###########"
+      ]
+    },
+    {
+      "numero": 3,
+      "nombre": "El reloj de seis engranajes",
+      "tipo_reto": "minimizacion",
+      "alfabeto": ["a", "b", "c"],
+      "historia": "Los guardias funcionan con seis estados, pero muchos son indistinguibles. Dibuja el autómata MÍNIMO equivalente: ni un estado de más.",
+      "concepto": "Reducir un autómata con estados equivalentes a su forma mínima.",
+      "objetivo": "A",
+      "automatas": {
+        "A": {
+          "estados": ["q0", "q1", "q2", "q3", "q4", "q5"],
+          "inicial": "q0",
+          "aceptacion": ["q1", "q4"],
+          "delta": {
+            "q0": { "a": "q1", "b": "q0", "c": "q3" },
+            "q1": { "a": "q2", "b": "q1", "c": "q4" },
+            "q2": { "a": "q3", "b": "q2", "c": "q5" },
+            "q3": { "a": "q4", "b": "q3", "c": "q0" },
+            "q4": { "a": "q5", "b": "q4", "c": "q1" },
+            "q5": { "a": "q0", "b": "q5", "c": "q2" }
+          }
+        }
+      },
+      "guardias": { "A": "A", "B": "A" },
+      "mapa": [
+        "###########",
+        "#..A...B..#",
+        "#P.s...s.E#",
+        "#.........#",
+        "#..s...s..#",
+        "###########"
+      ]
+    },
+    {
+      "numero": 4,
+      "nombre": "Tres guardias, dos verdades",
+      "tipo_reto": "equivalencia",
+      "alfabeto": ["a", "b", "c"],
+      "historia": "Tres guardias, tres autómatas. Dibuja el del guardia A y luego decide: ¿A y B reconocen el mismo lenguaje? ¿Y A y C? Si difieren, entrega una cadena que los distinga.",
+      "concepto": "Determinar si dos autómatas reconocen el mismo lenguaje.",
+      "objetivo": "A",
+      "pares": [["A", "B"], ["A", "C"]],
+      "automatas": {
+        "A": {
+          "estados": ["q0", "q1"],
+          "inicial": "q0",
+          "aceptacion": ["q1"],
+          "delta": {
+            "q0": { "a": "q0", "b": "q0", "c": "q1" },
+            "q1": { "a": "q0", "b": "q0", "c": "q1" }
+          }
+        },
+        "B": {
+          "estados": ["r0", "r1", "r2"],
+          "inicial": "r0",
+          "aceptacion": ["r1"],
+          "delta": {
+            "r0": { "a": "r2", "b": "r2", "c": "r1" },
+            "r1": { "a": "r2", "b": "r2", "c": "r1" },
+            "r2": { "a": "r2", "b": "r2", "c": "r1" }
+          }
+        },
+        "C": {
+          "estados": ["s0", "s1"],
+          "inicial": "s0",
+          "aceptacion": ["s1"],
+          "delta": {
+            "s0": { "a": "s0", "b": "s0", "c": "s1" },
+            "s1": { "a": "s1", "b": "s1", "c": "s1" }
+          }
+        }
+      },
+      "guardias": { "A": "A", "B": "B", "C": "C" },
+      "mapa": [
+        "#############",
+        "#..A..B..C..#",
+        "#P.s.....s.E#",
+        "#...........#",
+        "#############"
+      ]
+    }
+  ]
+}
