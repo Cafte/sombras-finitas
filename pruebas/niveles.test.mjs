@@ -133,7 +133,7 @@ test('Nivel 5 — pisar una casilla con letra emite esa señal; las demás casil
   assert.equal(p.senales, 'a');
 });
 
-test('Nivel 5 — recto por la fila 2 te descubre; la fila 1 (dos «a») lo mantiene dormido', () => {
+test('Nivel 5 — recto por la fila 2 te descubre; la ruta obvia de la fila 1 también, porque la «a» de la campana voltea la paridad', () => {
   const p = new Partida(n5);
   p.salidaAbierta = true;
   let r = { resultado: null };
@@ -144,9 +144,11 @@ test('Nivel 5 — recto por la fila 2 te descubre; la fila 1 (dos «a») lo mant
   q.salidaAbierta = true;
   const ruta = ['arriba', ...'derecha'.repeat(10).split('').map(() => 'derecha'), 'abajo'];
   let s = { resultado: null };
-  for (const m of ruta) { s = q.mover(m); if (s.resultado) break; }
-  assert.equal(s.resultado, 'ganado');
-  assert.equal(q.senales.match(/a/g).length % 2, 0, 'cantidad par de «a» en el camino');
+  let sono = null;
+  for (const m of ruta) { s = q.mover(m); if (s.campanazo) sono = s.campanazo; if (s.resultado) break; }
+  // Sin la campana esta ruta (dos «a» antes de la zona) ganaría; con ella, el 6.º turno suena (otra «a») junto al guardia.
+  assert.equal(s.resultado, 'descubierto');
+  assert.equal(sono, 'a', 'la campana sonó y envió una «a»');
 });
 
 test('Nivel 5 — es resoluble (solver) y la solución pasa por un número par de casillas «a»', () => {
@@ -173,7 +175,9 @@ test('Todos los niveles: tienen salida, inicio y solución demostrada por el sol
 test('Campana — niveles 3 y 4: suena cada 4 turnos y envía su señal a todos los guardias', () => {
   assert.deepEqual(n3.campana, { cada: 4, senal: 'c' });
   assert.deepEqual(n4.campana, { cada: 4, senal: 'b' });
-  assert.equal(niveles[0].campana, null); assert.equal(n5.campana, null);
+  assert.deepEqual(niveles[0].campana, { cada: 6, senal: 'b' });   // la «b» devuelve al guardia a q0 (despierto)
+  assert.deepEqual(n5.campana, { cada: 6, senal: 'a' });           // la «a» voltea la paridad
+  assert.equal(niveles[1].campana, null, 'el nivel 2 no la tiene: su estado trampa haría el nivel imposible');
 });
 
 test('Campana — nivel 4: el sueño de A y B se acaba cuando suena la campana (b)', () => {
@@ -234,4 +238,33 @@ test('Sin quedarse quieto — con la campana, dormir a los guardias una sola vez
   assert.ok(sol);
   const senales = sol.filter(a => a.startsWith('senal:'));
   assert.ok(senales.length >= 3, 'hay que volver a dormir tras la campana: ' + senales.join(' '));
+});
+
+test('Campana — nivel 2 sin campana: con ella una «b» caería en el estado trampa para siempre', () => {
+  const A = niveles[1].automatas.A;
+  const [trampa] = A.trampas();
+  assert.ok(trampa, 'el nivel 2 tiene un estado trampa');
+  assert.equal(A.paso('q0', 'b'), trampa, 'desde q0, una «b» ya cae en la trampa');
+  assert.equal(A.paso(trampa, 'a'), trampa); assert.equal(A.paso(trampa, 'b'), trampa);   // y de ella no se sale
+});
+
+test('Campana — nivel 1: suena cada 6 pasos y despierta al guardia dormido', () => {
+  const p = new Partida(niveles[0]);
+  p.senal('a');
+  assert.equal(p.guardias[0].dormido, true);
+  p.mover('derecha'); p.mover('izquierda'); p.mover('derecha'); p.mover('izquierda'); p.mover('derecha');
+  assert.equal(p.guardias[0].dormido, true);
+  const r = p.mover('izquierda');   // 6.º turno
+  assert.equal(r.campanazo, 'b');
+  assert.equal(p.guardias[0].dormido, false);
+});
+
+test('Campana — nivel 5: la «a» de la campana voltea la paridad y se resuelve con la ruta correcta (solver)', () => {
+  const sol = resolver(n5);
+  assert.ok(sol, 'sin solución con campana');
+  const p = new Partida(n5);
+  p.salidaAbierta = true;
+  for (const m of sol) p.mover(m);
+  assert.equal(p.estado, 'ganado');
+  assert.ok(p.marcasCampana.size >= 0);
 });

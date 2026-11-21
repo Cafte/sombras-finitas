@@ -6,7 +6,7 @@
       "nombre": "El vigía del pasillo",
       "tipo_reto": "deduccion",
       "alfabeto": ["a", "b"],
-      "historia": "Un solo guardia vigila el pasillo. Envía señales y observa cuándo se duerme. Deduce su autómata y dibújalo en el cuaderno.",
+      "historia": "Un solo guardia vigila el pasillo. Envía señales y observa cuándo se duerme. Deduce su autómata y dibújalo en el cuaderno. Ojo: cada 6 pasos suena una campana que envía una «b» al guardia.",
       "concepto": "Estados, transiciones, estado inicial y estado de aceptación de un AFD pequeño.",
       "objetivo": "A",
       "automatas": {
@@ -18,6 +18,7 @@
         }
       },
       "guardias": { "A": "A" },
+      "campana": { "cada": 6, "senal": "b" },
       "mapa": [
         "###########",
         "#....A....#",
@@ -149,7 +150,7 @@
       "bonus": true,
       "camino": true,
       "alfabeto": ["a", "b"],
-      "historia": "Nivel bonus. Aquí no hay botones de señal: cada casilla con letra que pisas emite esa señal al guardia. Tu ruta escribe la cadena. Deduce qué le hace cada letra, dibuja su autómata y elige un camino que lo mantenga dormido cuando pases cerca.",
+      "historia": "Nivel bonus. Aquí no hay botones de señal: cada casilla con letra que pisas emite esa señal al guardia. Tu ruta escribe la cadena. Deduce qué le hace cada letra, dibuja su autómata y elige un camino que lo mantenga dormido cuando pases cerca. Ojo: cada 6 pasos suena una campana que también le envía una «a».",
       "concepto": "La cadena de entrada la escribe tu camino: planear una ruta es elegir una cadena que el autómata acepte.",
       "objetivo": "A",
       "automatas": {
@@ -164,6 +165,7 @@
         }
       },
       "guardias": { "G": "A" },
+      "campana": { "cada": 6, "senal": "a" },
       "mapa": [
         "#############",
         "#..aa.b.....#",
