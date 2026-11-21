@@ -28,6 +28,7 @@ export class Nivel {
     this.reloj = datos.reloj ?? null;            // { inactividad: segundos }: la ronda avanza sola si te quedas quieto
     this.camino = !!datos.camino;                 // las señales las emite el camino (casillas con letra)
     this.bonus = !!datos.bonus;
+    this.pistas = datos.pistas ?? [];             // pistas progresivas (de suave a casi la solución)
     this.patrullas = datos.patrullas ?? {}; // { simboloEnMapa: [[x, y], ...] } puntos de paso de la ruta (opcional)
     this.inicioJugador = null;
     this.salida = null;

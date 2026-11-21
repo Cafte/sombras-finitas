@@ -6,6 +6,7 @@ import { musica } from './musica.js';
 import { Partida } from '../juego/mapa.js';
 import { RADIO_DESPIERTO } from '../juego/guardia.js';
 import { predecir } from '../juego/prediccion.js';
+import { observacion, pistaDiagrama } from '../juego/pistas.js';
 
 const TECLAS = { ArrowUp: 'arriba', ArrowDown: 'abajo', ArrowLeft: 'izquierda', ArrowRight: 'derecha' };
 
@@ -22,6 +23,9 @@ export class JuegoUI {
     this.pruebas = new Map(); // cadena -> { pred, real, ok }: lo que predijo el diagrama del estudiante vs la realidad
     this.ultimaAccion = performance.now();   // para el reloj de inactividad (la ronda avanza sola si te quedas quieto)
     this.avisoReloj = false;
+    this.etapa = 0;           // pista que se está viendo (0 = la más suave)
+    this.fallos = 0;          // veces que te han descubierto en este intento del nivel
+    $('#btn-pista').addEventListener('click', () => this.mostrarPista());
     setInterval(() => this.relojTic(), 1000);
     $$('.obs-vista').forEach(b => b.addEventListener('click', () => { this.vistaBit = b.dataset.vista; this.renderBitacora(); }));
 
@@ -42,6 +46,8 @@ export class JuegoUI {
     this.partida = new Partida(nivel);
     this.previas = []; this._cache = null; this.selBit = null; this.pruebas.clear();
     this.ultimaAccion = performance.now(); this.avisoReloj = false;
+    this.fallos = 0; $('#btn-pista').classList.remove('pulsa');
+    try { this.etapa = Math.min(Number(localStorage.getItem('sf-pista-' + nivel.numero)) || 0, Math.max(0, nivel.pistas.length - 1)); } catch { this.etapa = 0; }
     this.partida.salidaAbierta = salidaAbierta;
     $('#juego-titulo').textContent = `Nivel ${nivel.numero} · ${nivel.nombre}`;
     const sg = vaciar($('#juego-sigma'));
@@ -63,6 +69,39 @@ export class JuegoUI {
     this.renderPredicciones();
     this.avisar('');
   }
+
+  /* ---------- Pistas progresivas ---------- */
+  // Tras varios descubrimientos el botón Pista late para sugerirlo.
+  avisarFallo() {
+    this.fallos++;
+    if (this.fallos >= 2 && this.nivel?.pistas.length) { $('#btn-pista').classList.add('pulsa'); return true; }
+    return false;
+  }
+
+  mostrarPista() {
+    const n = this.nivel, p = this.partida;
+    if (!n || !p || !n.pistas.length) return;
+    const total = n.pistas.length;
+    this.etapa = Math.min(this.etapa, total - 1);
+    const filas = [...(this._cache ?? []), ...this.previas.flat()];
+    $('#btn-pista').classList.remove('pulsa');
+    const acciones = [];
+    if (this.etapa < total - 1) acciones.push({ texto: 'Otra pista más clara', primario: true, onclick: () => { this.etapa++; this._guardarEtapa(); this.mostrarPista(); } });
+    if (this.etapa > 0) acciones.push({ texto: 'Pista anterior', onclick: () => { this.etapa--; this.mostrarPista(); } });
+    acciones.push({ texto: 'Seguir jugando', primario: this.etapa === total - 1 });
+    this.ctx.modal({
+      titulo: `Pista ${this.etapa + 1} de ${total}`,
+      cuerpo: [
+        n.pistas[this.etapa],
+        h('div', { class: 'pista-bloque' }, h('b', { texto: 'Lo que has observado' }), ...observacion(p.guardias, filas).map(t => h('p', { texto: t }))),
+        h('div', { class: 'pista-bloque' }, h('b', { texto: 'Tu diagrama' }), h('p', { texto: pistaDiagrama(this.ctx.cuaderno, n) })),
+        this.etapa === 0 ? h('p', { class: 'pista-nota', texto: 'Piensa un momento antes de pedir otra: cada pista es más clara que la anterior.' }) : null
+      ].filter(Boolean),
+      acciones
+    });
+  }
+
+  _guardarEtapa() { try { localStorage.setItem('sf-pista-' + this.nivel.numero, String(this.etapa)); } catch { /* ignorar */ } }
 
   /* ---------- Campana y reloj (el sueño dura poco) ---------- */
   // La campana envía su señal a todos los guardias cada cierto número de turnos.

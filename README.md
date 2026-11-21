@@ -147,3 +147,7 @@ caché y **recarga con el servidor apagado** (juego y progreso intactos); sin de
 ## Avance y bloqueos
 
 Solo puede estar «en curso» el primer nivel sin superar; los demás empiezan bloqueados. `Almacen.normalizarBloqueos()` se ejecuta al abrir el juego y vuelve a bloquear cualquier nivel abierto de más (datos antiguos) sin tocar los niveles ya superados.
+
+## Pistas
+
+Botón **Pista** en el mapa y en el cuaderno. Cada nivel tiene **3 pistas progresivas** (`pistas` en `data/niveles.json`), de una sugerencia suave a casi la solución, con «Otra pista más clara» / «Pista anterior»; la etapa se recuerda por nivel (`sf-pista-N`). Además cada pista añade dos bloques calculados con lo que el jugador ya hizo (`js/juego/pistas.js`): **lo que has observado** (con qué cadena más corta vio dormido a cada guardia) y **tu diagrama** (qué le falta, o el contraejemplo concreto: «con la cadena «a» tu diagrama rechaza, pero el guardia se duerme»). Tras dos descubrimientos seguidos el botón late y el diálogo de derrota sugiere usarlo. `pruebas/pistas.test.mjs` verifica con el motor que lo que afirman las pistas fijas es verdad.

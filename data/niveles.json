@@ -8,6 +8,11 @@
       "alfabeto": ["a", "b"],
       "historia": "Un solo guardia vigila el pasillo. Envía señales y observa cuándo se duerme. Deduce su autómata y dibújalo en el cuaderno. Ojo: cada 6 pasos suena una campana que envía una «b» al guardia.",
       "concepto": "Estados, transiciones, estado inicial y estado de aceptación de un AFD pequeño.",
+      "pistas": [
+        "Emite una señal y mira la bitácora: verde = dormido (estado de aceptación), rojo = despierto. Prueba cada señal por separado y observa qué cambia.",
+        "Prueba cadenas cortas como «a», «b», «ab» y «ba» (reinicia a los guardias entre pruebas si quieres). Fíjate en cuál fue la ÚLTIMA señal cuando el guardia se durmió.",
+        "El guardia se duerme cuando la última señal fue «a». Dibuja dos estados: q0 (inicial, sin aceptación) y q1 (de aceptación). Con «a», desde cualquier estado vas a q1; con «b», desde cualquier estado vas a q0."
+      ],
       "objetivo": "A",
       "automatas": {
         "A": {
@@ -33,6 +38,11 @@
       "alfabeto": ["a", "b"],
       "historia": "Dos guardias gemelos obedecen el mismo autómata. Hay cadenas que los duermen y cadenas que los dejan despiertos para siempre. Encuentra el estado trampa.",
       "concepto": "Cadenas aceptadas y rechazadas, y detección de un estado trampa.",
+      "pistas": [
+        "Hay una cadena corta que duerme a los guardias. Prueba «a», «b», «ab», «ba» y «aab»: ¿cuáles los duermen? Algunas combinaciones los dejan despiertos hagas lo que hagas después.",
+        "Solo se duermen con «ab» y con «ab» seguida de más «a» («aba», «abaa»…). Cualquier otro camino los deja despiertos para siempre: ahí hay un estado trampa, del que no se sale con ninguna señal.",
+        "Dibuja cuatro estados: q0 —a→ q1 —b→ q2 (aceptación) y q2 —a→ q2. Todas las demás transiciones (q0 con «b», q1 con «a», q2 con «b») van a un estado trampa que se queda en sí mismo con «a» y con «b»."
+      ],
       "objetivo": "A",
       "automatas": {
         "A": {
@@ -63,6 +73,11 @@
       "alfabeto": ["a", "b", "c"],
       "historia": "Los guardias funcionan con seis estados, pero muchos son indistinguibles. Dibuja el autómata MÍNIMO equivalente: ni un estado de más. Cada señal que emites es un turno: los guardias despiertos patrullan. Cada 4 turnos suena la campana y envía una «c» a todos: el sueño dura poco, así que hay que cruzar a tiempo y esconderse en una sombra cuando suene. Si te quedas quieto, la ronda avanza sola. Con tu diagrama completo, cada botón (y la campana) te dirá qué predice tu autómata. Al final se compara tu cadena con la más corta posible.",
       "concepto": "Reducir un autómata con estados equivalentes a su forma mínima.",
+      "pistas": [
+        "Observa qué hace cada señal por separado. ¿La «b» cambia algo? ¿Qué le pasa al guardia cuando emites «c»? Y cuenta cuántas «a» hacen falta para que se duerma.",
+        "La «b» no cambia nada, la «c» devuelve al guardia a su estado inicial (despierto) y las «a» van contando. Prueba «a», «aa», «aaa», «aaaa»: se duerme una de cada tres. Recuerda que la campana también envía una «c».",
+        "El autómata mínimo tiene 3 estados: s0 (inicial) —a→ s1 (aceptación) —a→ s2 —a→ s0; con «b» cada estado se queda donde está y con «c» todos van a s0. Para cruzar: duerme con «a», avanza, escóndete en una sombra cuando suene la campana y vuelve a emitir «a»."
+      ],
       "objetivo": "A",
       "automatas": {
         "A": {
@@ -99,6 +114,11 @@
       "alfabeto": ["a", "b", "c"],
       "historia": "El pasillo tiene dos zonas: A y B vigilan la primera y C la segunda. Ninguna cadena duerme a los tres a la vez, así que hay que dormir cada zona en su momento. Dibuja el autómata del guardia A y luego decide: ¿A y B reconocen el mismo lenguaje? ¿Y A y C? Si difieren, entrega una cadena que los distinga. Ojo: los guardias despiertos patrullan, un paso por cada movimiento tuyo; los dormidos se quedan quietos, pero el sueño dura poco: cada 4 pasos suena la campana y envía una «b» a todos los guardias, y si te quedas quieto la ronda avanza sola. Cruza a tiempo y usa las sombras.",
       "concepto": "Determinar si dos autómatas reconocen el mismo lenguaje, y ver por qué lenguajes disjuntos nunca duermen a sus guardias a la vez.",
+      "pistas": [
+        "A y B parecen comportarse igual; C es distinto. Emite «a», «b» y «c» y mira cuándo se duerme cada guardia. ¿Hay alguna señal que los duerma a todos a la vez?",
+        "A y B se duermen cuando la última señal fue «a»; C, cuando fue «c». Nunca se duermen los tres juntos: duerme primero a A y B con «a», cruza esa zona hasta el refugio y entonces emite «c» para dormir a C. La campana vuelve a despertarlos: no te quedes quieto.",
+        "Respuestas del reto: A y B son equivalentes (mismo lenguaje); A y C no lo son, y la cadena «a» los distingue (A la acepta y C no). Para dibujar A: dos estados, q0 (inicial) y q1 (aceptación); «a» va a q1, y «b» y «c» van a q0."
+      ],
       "objetivo": "A",
       "pares": [["A", "B"], ["A", "C"]],
       "automatas": {
@@ -152,6 +172,11 @@
       "alfabeto": ["a", "b"],
       "historia": "Nivel bonus. Aquí no hay botones de señal: cada casilla con letra que pisas emite esa señal al guardia. Tu ruta escribe la cadena. Deduce qué le hace cada letra, dibuja su autómata y elige un camino que lo mantenga dormido cuando pases cerca.",
       "concepto": "La cadena de entrada la escribe tu camino: planear una ruta es elegir una cadena que el autómata acepte.",
+      "pistas": [
+        "No hay botones: lo que emites es lo que pisas. Prueba a pisar una casilla «a» y otra «b» (lejos del guardia) y mira cómo reacciona en la bitácora.",
+        "La «b» no cambia nada y cada «a» lo duerme o lo despierta: solo está dormido si has pisado un número par de «a» (empieza dormido, con cero). Dentro de su radio necesitas que esté dormido.",
+        "La fila de arriba tiene dos casillas «a» seguidas antes de la zona del guardia: písalas las dos y quedará dormido al pasar. Autómata: q0 (inicial y de aceptación) —a→ q1 —a→ q0; con «b» cada estado se queda donde está."
+      ],
       "objetivo": "A",
       "automatas": {
         "A": {

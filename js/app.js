@@ -244,7 +244,8 @@ async function alDescubrir(partida) {
   modal({
     titulo: 'Te descubrieron', clase: 'derrota',
     cuerpo: [`El guardia ${partida.causa} estaba despierto y te detectó. Los guardias despiertos ven a 2 casillas; las sombras te ocultan y los dormidos no detectan.`,
-      'Vuelves a la entrada y los guardias a q₀. Tu cuaderno se conserva.'],
+      'Vuelves a la entrada y los guardias a q₀. Tu cuaderno se conserva.',
+      ...(juego.avisarFallo() ? ['¿Atascado? Toca «Pista» (arriba a la derecha del mapa): te ayuda paso a paso.'] : [])],
     acciones: [{ texto: 'Reintentar', primario: true, onclick: () => { partida.reaparecer(); juego.renderBitacora(); juego.vista.anim = null; } },
       { texto: 'Abrir cuaderno', onclick: () => { partida.reaparecer(); juego.renderBitacora(); abrirCuaderno(); } },
       { texto: 'Menú de niveles', onclick: () => ir('niveles') }]
@@ -263,6 +264,7 @@ ctx.probarEnCuaderno = probarEnCuaderno;
 const juego = new JuegoUI(ctx);
 const cuadernoUI = new CuadernoUI(ctx);
 const diag = new DiagnosticoUI(ctx);
+$('#btn-pista-cuaderno').addEventListener('click', () => juego.mostrarPista());
 
 /* ---------- Arranque ---------- */
 function conexion() {
