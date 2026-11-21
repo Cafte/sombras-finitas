@@ -173,7 +173,7 @@ test('Todos los niveles: tienen salida, inicio y solución demostrada por el sol
 test('Campana — niveles 3 y 4: suena cada 4 turnos y envía su señal a todos los guardias', () => {
   assert.deepEqual(n3.campana, { cada: 4, senal: 'c' });
   assert.deepEqual(n4.campana, { cada: 4, senal: 'b' });
-  assert.deepEqual(niveles[0].campana, { cada: 4, senal: 'b' });   // la «b» devuelve al guardia a q0 (despierto)
+  assert.deepEqual(niveles[0].campana, { cada: 6, senal: 'b' });   // la «b» devuelve al guardia a q0 (despierto)
   assert.equal(niveles[1].campana, null, 'el nivel 2 no la tiene: su estado trampa haría el nivel imposible');
   assert.equal(n5.campana, null, 'el nivel 5 no la tiene: el camino ya escribe la cadena');
 });
@@ -246,13 +246,13 @@ test('Campana — nivel 2 sin campana: con ella una «b» caería en el estado t
   assert.equal(A.paso(trampa, 'a'), trampa); assert.equal(A.paso(trampa, 'b'), trampa);   // y de ella no se sale
 });
 
-test('Campana — nivel 1: suena cada 4 pasos y despierta al guardia dormido', () => {
+test('Campana — nivel 1: suena cada 6 pasos y despierta al guardia dormido', () => {
   const p = new Partida(niveles[0]);
   p.senal('a');
   assert.equal(p.guardias[0].dormido, true);
-  p.mover('derecha'); p.mover('izquierda'); p.mover('derecha');
+  p.mover('derecha'); p.mover('izquierda'); p.mover('derecha'); p.mover('izquierda'); p.mover('derecha');
   assert.equal(p.guardias[0].dormido, true);
-  const r = p.mover('izquierda');   // 4.º turno
+  const r = p.mover('izquierda');   // 6.º turno
   assert.equal(r.campanazo, 'b');
   assert.equal(p.guardias[0].dormido, false);
 });
