@@ -250,6 +250,12 @@ export class Almacen {
     try { return JSON.parse(p?.pares_resueltos ?? '{}'); } catch { return {}; }
   }
 
+  // Solo para pruebas: deja todos los niveles bloqueados como «en curso» (no marca ninguno como superado).
+  async desbloquearTodo() {
+    const prog = await this.b.porIndice('progreso', 'id_perfil', this.perfil.id_perfil);
+    for (const p of prog) if (p.estado === 'bloqueado') { p.estado = 'en_curso'; await this.b.put('progreso', p); }
+  }
+
   async _dibujoDe(idNivel) {
     return (await this.b.porIndice('automata', 'id_nivel', idNivel))
       .find(a => a.tipo === 'dibujado' && a.id_perfil === this.perfil.id_perfil);

@@ -266,6 +266,8 @@ async function arrancar() {
     ctx.datos = await (await fetch('data/niveles.json')).json();
     ctx.almacen = await Almacen.abrir();
     await ctx.almacen.inicializar(ctx.datos);
+    // Enlace de prueba: ?desbloquear=1 abre todos los niveles sin marcarlos como superados.
+    if (new URLSearchParams(location.search).get('desbloquear') === '1') await ctx.almacen.desbloquearTodo();
   } catch (e) {
     console.error(e);
     modal({ titulo: 'No se pudo iniciar', cuerpo: ['Ocurrió un error al cargar los datos del juego. Recarga la página.'], acciones: [{ texto: 'Recargar', primario: true, onclick: () => location.reload() }] });
