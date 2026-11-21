@@ -19,6 +19,9 @@ export class JuegoUI {
     this._cache = null;       // filas de la bitácora en el último render
     this.selBit = null;       // fila elegida { cadena, dorm }
     this.pruebas = new Map(); // cadena -> { pred, real, ok }: lo que predijo el diagrama del estudiante vs la realidad
+    this.ultimaAccion = performance.now();   // para el reloj de inactividad (la ronda avanza sola si te quedas quieto)
+    this.avisoReloj = false;
+    setInterval(() => this.relojTic(), 1000);
     $$('.obs-vista').forEach(b => b.addEventListener('click', () => { this.vistaBit = b.dataset.vista; this.renderBitacora(); }));
 
     $$('[data-mov]').forEach(b => b.addEventListener('click', () => this.mover(b.dataset.mov)));
@@ -37,6 +40,7 @@ export class JuegoUI {
     this.nivel = nivel;
     this.partida = new Partida(nivel);
     this.previas = []; this._cache = null; this.selBit = null; this.pruebas.clear();
+    this.ultimaAccion = performance.now(); this.avisoReloj = false;
     this.partida.salidaAbierta = salidaAbierta;
     $('#juego-titulo').textContent = `Nivel ${nivel.numero} · ${nivel.nombre}`;
     const sg = vaciar($('#juego-sigma'));
@@ -53,9 +57,56 @@ export class JuegoUI {
   activar() {
     this.vista.asignar(this.partida);
     this.vista.iniciar();
+    this.ultimaAccion = performance.now();
     this.renderBitacora();
     this.renderPredicciones();
     this.avisar('');
+  }
+
+  /* ---------- Campana y reloj (el sueño dura poco) ---------- */
+  // La campana envía su señal a todos los guardias cada cierto número de turnos.
+  campanazo(letra) {
+    sonido.despertar();
+    this.avisar(`¡Suena la campana! Señal «${letra}» para todos los guardias`);
+    this.renderBitacora(true);
+  }
+
+  renderCampana() {
+    const el = $('#campana');
+    const p = this.partida, c = this.nivel?.campana;
+    if (!p || !c) { el.hidden = true; return; }
+    const partes = [`Campana en ${p.campanaRestante} · «${c.senal}»`];
+    if (this.nivel.prediccion) {
+      const pr = this.predecir(c.senal);
+      if (pr) partes.push(`tu diagrama: ${pr === 'dormido' ? 'dormidos' : 'despiertos'}`);
+    }
+    if (this.nivel.reloj && !this._enGracia()) {
+      const resta = Math.max(0, Math.ceil(this.nivel.reloj.inactividad - (performance.now() - this.ultimaAccion) / 1000));
+      partes.push(`ronda en ${resta}s`);
+    }
+    el.textContent = partes.join(' · ');
+    el.classList.toggle('pronto', p.campanaRestante <= 1);
+    el.hidden = false;
+  }
+
+  _enGracia() { return !this.partida || (this.partida.pasos === 0 && this.partida.senalesJugador === 0); }
+
+  // Cada segundo: si el jugador se queda quieto, la ronda avanza sola (patrulla y campana). El reloj espera a la primera acción.
+  relojTic() {
+    const p = this.partida, r = this.nivel?.reloj;
+    if (!p || !r || !this.activo || document.hidden || p.estado !== 'jugando' || this.ctx.modalAbierto()) return;
+    if (this._enGracia()) { this.ultimaAccion = performance.now(); return; }
+    if (performance.now() - this.ultimaAccion >= r.inactividad * 1000) {
+      this.ultimaAccion = performance.now();
+      if (!this.avisoReloj) { this.avisoReloj = true; this.avisar('El tiempo no se detiene: si te quedas quieto, la ronda avanza sola.'); }
+      const res = p.turno();
+      if (!res.ok) return;
+      if (res.campanazo) this.campanazo(res.campanazo);
+      this.renderBitacora(res.campanazo != null);
+      this.renderPredicciones();
+      this.resolver(res.resultado);
+    }
+    this.renderCampana();
   }
 
   /* ---------- Predicción del diagrama (nivel 3) ---------- */
@@ -117,6 +168,9 @@ export class JuegoUI {
       this.avisar(`Casilla «${r.emitio}»: señal emitida`);
       this.renderBitacora(true);
     }
+    if (r.campanazo) this.campanazo(r.campanazo);
+    this.ultimaAccion = performance.now();
+    this.renderCampana();
     this.resolver(r.resultado);
   }
 
@@ -137,6 +191,8 @@ export class JuegoUI {
     const despues = p.guardias.map(g => g.dormido);
     if (despues.some((d, k) => d && !antes[k])) setTimeout(() => sonido.dormir(), 120);
     else if (despues.some((d, k) => !d && antes[k])) setTimeout(() => sonido.despertar(), 120);
+    if (r.campanazo) this.campanazo(r.campanazo);
+    this.ultimaAccion = performance.now();
     this.renderBitacora(true);
     this.renderPredicciones();
     this.resolver(r.resultado);
@@ -239,6 +295,7 @@ export class JuegoUI {
     else this._renderConducta(filas);
     caja.scrollTop = nuevo ? 0 : scroll;
     this._renderDetalle();
+    this.renderCampana();
   }
 
   _cadenaCorta(w) { return w === '' ? 'ε' : (w.length > 9 ? '…' + w.slice(-8) : w); }
@@ -261,7 +318,8 @@ export class JuegoUI {
         onclick: () => this._elegir(f.cadena, f.dorm),
         onkeydown: e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this._elegir(f.cadena, f.dorm); } }
       },
-      h('td', {}, f.cadena === '' ? h('span', { class: 'tr-vacio', texto: 'inicio' }) : h('span', { class: `tr-chip s${alf.indexOf(ult) % 3} ultimo`, texto: ult })),
+      h('td', {}, f.cadena === '' ? h('span', { class: 'tr-vacio', texto: 'inicio' }) : h('span', { class: `tr-chip s${alf.indexOf(ult) % 3} ultimo${!extra && this.partida.marcasCampana.has(f.cadena.length) ? ' de-campana' : ''}`, texto: ult }),
+        !extra && f.cadena !== '' && this.partida.marcasCampana.has(f.cadena.length) && h('small', { class: 'tag-campana', texto: 'campana' })),
       h('td', { class: 'cad' }, f.cadena === '' ? 'ε' : h('span', {}, h('span', { class: 'cad-ant', texto: antes.length > 8 ? '…' + antes.slice(-8) : antes }), h('b', { texto: ult })),
         !extra && this.pruebas.get(f.cadena) && h('span', { class: 'pred-mark ' + (this.pruebas.get(f.cadena).ok ? 'ok' : 'mal'), title: `Tu diagrama predijo «${this.pruebas.get(f.cadena).pred}»; realidad: «${this.pruebas.get(f.cadena).real}»`, texto: this.pruebas.get(f.cadena).ok ? '✓' : '⚠' })),
       ...f.dorm.map((d, k) => {

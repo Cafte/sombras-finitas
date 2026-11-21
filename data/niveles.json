@@ -60,7 +60,7 @@
       "nombre": "El reloj de seis engranajes",
       "tipo_reto": "minimizacion",
       "alfabeto": ["a", "b", "c"],
-      "historia": "Los guardias funcionan con seis estados, pero muchos son indistinguibles. Dibuja el autómata MÍNIMO equivalente: ni un estado de más. Ahora cada señal que emites cuenta como un turno: los guardias despiertos patrullan. Con tu diagrama completo, cada botón te dirá qué predice tu autómata; si la realidad no coincide, hay un error. Al final se compara tu cadena con la más corta posible.",
+      "historia": "Los guardias funcionan con seis estados, pero muchos son indistinguibles. Dibuja el autómata MÍNIMO equivalente: ni un estado de más. Cada señal que emites es un turno: los guardias despiertos patrullan. Cada 4 turnos suena la campana y envía una «c» a todos: el sueño dura poco, así que hay que cruzar a tiempo y esconderse en una sombra cuando suene. Si te quedas quieto, la ronda avanza sola. Con tu diagrama completo, cada botón (y la campana) te dirá qué predice tu autómata. Al final se compara tu cadena con la más corta posible.",
       "concepto": "Reducir un autómata con estados equivalentes a su forma mínima.",
       "objetivo": "A",
       "automatas": {
@@ -69,25 +69,26 @@
           "inicial": "q0",
           "aceptacion": ["q1", "q4"],
           "delta": {
-            "q0": { "a": "q1", "b": "q0", "c": "q3" },
-            "q1": { "a": "q2", "b": "q1", "c": "q4" },
-            "q2": { "a": "q3", "b": "q2", "c": "q5" },
+            "q0": { "a": "q1", "b": "q0", "c": "q0" },
+            "q1": { "a": "q2", "b": "q1", "c": "q0" },
+            "q2": { "a": "q3", "b": "q2", "c": "q0" },
             "q3": { "a": "q4", "b": "q3", "c": "q0" },
-            "q4": { "a": "q5", "b": "q4", "c": "q1" },
-            "q5": { "a": "q0", "b": "q5", "c": "q2" }
+            "q4": { "a": "q5", "b": "q4", "c": "q0" },
+            "q5": { "a": "q0", "b": "q5", "c": "q0" }
           }
         }
       },
       "guardias": { "A": "A", "B": "A" },
       "ayudas": { "prediccion": true, "costoSenal": true },
-      "patrullas": { "A": [[5, 1]], "B": [[9, 1]] },
+      "patrullas": { "A": [[4, 3], [4, 1]], "B": [[8, 3], [8, 1]] },
+      "campana": { "cada": 4, "senal": "c" },
+      "reloj": { "inactividad": 6 },
       "mapa": [
-        "###########",
-        "#..A...B..#",
-        "#P.s...s.E#",
-        "#.........#",
-        "#..s...s..#",
-        "###########"
+        "#############",
+        "#..s..s..s..#",
+        "#P..A...B..E#",
+        "#..s..s..s..#",
+        "#############"
       ]
     },
     {
@@ -95,7 +96,7 @@
       "nombre": "Tres guardias, dos verdades",
       "tipo_reto": "equivalencia",
       "alfabeto": ["a", "b", "c"],
-      "historia": "El pasillo tiene dos zonas: A y B vigilan la primera y C la segunda. Ninguna cadena duerme a los tres a la vez, así que hay que dormir cada zona en su momento. Dibuja el autómata del guardia A y luego decide: ¿A y B reconocen el mismo lenguaje? ¿Y A y C? Si difieren, entrega una cadena que los distinga. Ojo: los guardias despiertos patrullan, un paso por cada movimiento tuyo; los dormidos se quedan quietos.",
+      "historia": "El pasillo tiene dos zonas: A y B vigilan la primera y C la segunda. Ninguna cadena duerme a los tres a la vez, así que hay que dormir cada zona en su momento. Dibuja el autómata del guardia A y luego decide: ¿A y B reconocen el mismo lenguaje? ¿Y A y C? Si difieren, entrega una cadena que los distinga. Ojo: los guardias despiertos patrullan, un paso por cada movimiento tuyo; los dormidos se quedan quietos, pero el sueño dura poco: cada 4 pasos suena la campana y envía una «b» a todos los guardias, y si te quedas quieto la ronda avanza sola. Cruza a tiempo y usa las sombras.",
       "concepto": "Determinar si dos autómatas reconocen el mismo lenguaje, y ver por qué lenguajes disjuntos nunca duermen a sus guardias a la vez.",
       "objetivo": "A",
       "pares": [["A", "B"], ["A", "C"]],
@@ -131,6 +132,8 @@
       },
       "guardias": { "A": "A", "B": "B", "C": "C" },
       "patrullas": { "A": [[3, 3]], "B": [[6, 1]], "C": [[12, 3]] },
+      "campana": { "cada": 4, "senal": "b" },
+      "reloj": { "inactividad": 6 },
       "mapa": [
         "###############",
         "#..A.B......C.#",

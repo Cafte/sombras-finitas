@@ -198,7 +198,7 @@ async function alGanar(partida) {
   const cuerpo = [`Cruzaste en ${partida.pasos} pasos.`, `Concepto dominado: ${n.concepto}`];
   if (n.costoSenal) {   // cada señal fue un turno: se compara tu cadena con la más corta posible
     const mejor = n.mejorCadena();
-    const usadas = partida.senales.length;
+    const usadas = partida.senalesJugador;   // la campana no cuenta como señal tuya
     if (mejor !== null) {
       cuerpo.push(usadas <= mejor.length
         ? `¡Cadena óptima! Usaste ${usadas} señal${usadas === 1 ? '' : 'es'} en tu cruce.`

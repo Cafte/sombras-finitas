@@ -193,7 +193,7 @@ test('RF07 — nivel 3 exige mínimo: diagrama de 6 estados equivalente es recha
   const m = Cuaderno.desde(null, al(n));
   const [m0, m1, m2] = [0, 1, 2].map(i => m.agregarEstado(i, 0));
   m.marcarInicial(m0.id); m.alternarAceptacion(m1.id);
-  for (const s of [m0, m1, m2]) { m.ponerTransicion(s.id, 'b', s.id); m.ponerTransicion(s.id, 'c', s.id); }
+  for (const s of [m0, m1, m2]) { m.ponerTransicion(s.id, 'b', s.id); m.ponerTransicion(s.id, 'c', m0.id); }   // «c» reinicia el contador
   m.ponerTransicion(m0.id, 'a', m1.id); m.ponerTransicion(m1.id, 'a', m2.id); m.ponerTransicion(m2.id, 'a', m0.id);
   const r = m.validar(n.automataObjetivo, { exigirMinimo: true });
   assert.equal(r.estado, 'equivalente');

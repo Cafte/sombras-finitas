@@ -24,6 +24,8 @@ export class Nivel {
     this.ayudas = datos.ayudas ?? {};
     this.prediccion = !!this.ayudas.prediccion;   // muestra lo que predice el diagrama del estudiante
     this.costoSenal = !!this.ayudas.costoSenal;   // cada señal es un turno de los guardias
+    this.campana = datos.campana ?? null;        // { cada: turnos, senal: símbolo }: el sueño dura poco
+    this.reloj = datos.reloj ?? null;            // { inactividad: segundos }: la ronda avanza sola si te quedas quieto
     this.camino = !!datos.camino;                 // las señales las emite el camino (casillas con letra)
     this.bonus = !!datos.bonus;
     this.patrullas = datos.patrullas ?? {}; // { simboloEnMapa: [[x, y], ...] } puntos de paso de la ruta (opcional)

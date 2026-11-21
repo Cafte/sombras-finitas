@@ -21,16 +21,16 @@ function* cadenas(sigma, k) {
 
 // Solver: búsqueda en anchura sobre (jugador, estado y posición de cada guardia). Con la salida abierta,
 // devuelve la lista de acciones más corta que lleva a ganar sin ser descubierto, o null si no existe.
-function resolver(nivel) {
+function resolver(nivel, { sinSenales = false } = {}) {
   const p = new Partida(nivel);
   p.salidaAbierta = true;
-  const snap = () => ({ j: { ...p.jugador }, g: p.guardias.map(g => ({ q: g.estado, x: g.x, y: g.y, i: g.i, d: g.dir })) });
+  const snap = () => ({ j: { ...p.jugador }, c: p.campanaRestante, g: p.guardias.map(g => ({ q: g.estado, x: g.x, y: g.y, i: g.i, d: g.dir })) });
   const rest = o => {
-    p.jugador = { ...o.j }; p.estado = 'jugando';
+    p.jugador = { ...o.j }; p.estado = 'jugando'; p.campanaRestante = o.c;
     p.guardias.forEach((g, k) => { const v = o.g[k]; g.estado = v.q; g.x = v.x; g.y = v.y; g.i = v.i; g.dir = v.d; });
   };
-  const clave = o => `${o.j.x},${o.j.y}|` + o.g.map(v => `${v.q},${v.i},${v.d}`).join(';');
-  const acciones = ['arriba', 'abajo', 'izquierda', 'derecha', ...(nivel.camino ? [] : nivel.alfabeto.map(a => 'senal:' + a))];
+  const clave = o => `${o.j.x},${o.j.y},${o.c}|` + o.g.map(v => `${v.q},${v.i},${v.d}`).join(';');
+  const acciones = ['arriba', 'abajo', 'izquierda', 'derecha', ...(nivel.camino || sinSenales ? [] : nivel.alfabeto.map(a => 'senal:' + a))];
   const ini = snap();
   const cola = [[ini, []]], vistos = new Set([clave(ini)]);
   while (cola.length) {
@@ -65,7 +65,7 @@ test('Nivel 3 — emitir una señal mueve a los guardias despiertos (y solo a el
   const antes = p.guardias.map(g => [g.x, g.y]);
   const r = p.senal('b');                               // b no duerme a nadie: ambos patrullan
   assert.equal(r.patrullaron, 2);
-  assert.deepEqual(p.guardias.map(g => [g.x, g.y]), [[4, 1], [8, 1]]);
+  assert.deepEqual(p.guardias.map(g => [g.x, g.y]), [[4, 3], [8, 3]]);
   const q = new Partida(n3);
   q.senal('a');                                         // a duerme a ambos: nadie se mueve
   assert.deepEqual(q.guardias.map(g => [g.x, g.y]), antes);
@@ -167,4 +167,71 @@ test('Todos los niveles: tienen salida, inicio y solución demostrada por el sol
     assert.ok(n.inicioJugador && n.salida, 'nivel ' + n.numero);
     assert.ok(resolver(n), 'nivel ' + n.numero + ' sin solución');
   }
+});
+
+/* ---------- Campana: el sueño dura poco ---------- */
+test('Campana — niveles 3 y 4: suena cada 4 turnos y envía su señal a todos los guardias', () => {
+  assert.deepEqual(n3.campana, { cada: 4, senal: 'c' });
+  assert.deepEqual(n4.campana, { cada: 4, senal: 'b' });
+  assert.equal(niveles[0].campana, null); assert.equal(n5.campana, null);
+});
+
+test('Campana — nivel 4: el sueño de A y B se acaba cuando suena la campana (b)', () => {
+  const p = new Partida(n4);
+  assert.equal(p.senal('a').resultado, null);                 // A y B duermen (las señales no cuentan como turno en el nivel 4)
+  assert.deepEqual(p.guardias.map(g => g.dormido), [true, true, false]);
+  assert.equal(p.campanaRestante, 4);
+  for (const m of ['abajo', 'arriba', 'abajo']) assert.equal(p.mover(m).campanazo, null);
+  assert.equal(p.campanaRestante, 1);
+  const r = p.mover('arriba');                                 // 4.º turno: suena la campana
+  assert.equal(r.campanazo, 'b');
+  assert.deepEqual(p.guardias.map(g => g.dormido), [false, false, false], 'la «b» despierta a todos');
+  assert.equal(p.senales, 'ab'); assert.equal(p.senalesJugador, 1, 'la campana no cuenta como señal del jugador');
+  assert.ok(p.marcasCampana.has(2));
+  assert.equal(p.campanaRestante, 4, 'la cuenta atrás se reinicia');
+});
+
+test('Campana — nivel 3: la «c» de la campana reinicia a los guardias a q0 (despiertos)', () => {
+  const p = new Partida(n3);
+  p.senal('a');                                                // a duerme a ambos (cuenta un turno)
+  assert.ok(p.guardias.every(g => g.dormido));
+  assert.equal(p.campanaRestante, 3);
+  p.mover('arriba'); p.mover('abajo');
+  const r = p.mover('arriba');                                 // turno 4 desde el inicio: suena
+  assert.equal(r.campanazo, 'c');
+  assert.ok(p.guardias.every(g => !g.dormido && g.estado === 'q0'));
+});
+
+test('Reloj — si el jugador no actúa, turno() hace avanzar la ronda sola (patrulla y campana)', () => {
+  assert.deepEqual(n3.reloj, { inactividad: 6 }); assert.deepEqual(n4.reloj, { inactividad: 6 });
+  const p = new Partida(n3);
+  const antes = p.guardias.map(g => [g.x, g.y]);
+  const r = p.turno();
+  assert.equal(r.ok, true); assert.equal(r.patrullaron, 2);
+  assert.notDeepEqual(p.guardias.map(g => [g.x, g.y]), antes);
+  assert.equal(p.campanaRestante, 3);
+  let sono = null;
+  for (let i = 0; i < 3; i++) sono = p.turno().campanazo ?? sono;
+  assert.equal(sono, 'c');
+  assert.equal(p.campanaRestante, 4, 'la campana también suena sin que el jugador se mueva');
+  assert.equal(p.estado, 'jugando');
+});
+
+test('Reloj — en el nivel 4, quedarse quieto con A despierto termina en descubrimiento (por eso el reloj espera a la primera acción)', () => {
+  const p = new Partida(n4);
+  let r = { resultado: null };
+  for (let i = 0; i < 4 && r.resultado === null; i++) r = p.turno();
+  assert.equal(r.resultado, 'descubierto');
+});
+
+test('Sin atajos — los niveles 3 y 4 no se pueden pasar sin emitir señales', () => {
+  assert.equal(resolver(n3, { sinSenales: true }), null);
+  assert.equal(resolver(n4, { sinSenales: true }), null);
+});
+
+test('Sin quedarse quieto — con la campana, dormir a los guardias una sola vez ya no basta (nivel 4)', () => {
+  const sol = resolver(n4);
+  assert.ok(sol);
+  const senales = sol.filter(a => a.startsWith('senal:'));
+  assert.ok(senales.length >= 3, 'hay que volver a dormir tras la campana: ' + senales.join(' '));
 });

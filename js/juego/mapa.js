@@ -16,6 +16,9 @@ export class Partida {
     this.guardias = this.nivel.crearGuardias();
     this.estado = 'jugando'; // jugando | descubierto | ganado
     this.senales = '';        // cadena emitida en total desde el último reinicio de guardias
+    this.senalesJugador = 0;  // cuántas de esas señales las emitió el jugador (el resto, la campana)
+    this.marcasCampana = new Set();   // longitudes de la cadena en las que sonó la campana
+    this.campanaRestante = this.nivel.campana?.cada ?? 0;
     this.pasos = 0;
     this.causa = null;
   }
@@ -24,7 +27,11 @@ export class Partida {
   reaparecer() {
     this.jugador = { ...this.nivel.inicioJugador };
     this.guardias.forEach(g => g.reiniciar());
+    this.pasos = 0;
     this.senales = '';
+    this.senalesJugador = 0;
+    this.marcasCampana.clear();
+    this.campanaRestante = this.nivel.campana?.cada ?? 0;
     this.estado = 'jugando';
     this.causa = null;
   }
@@ -76,10 +83,37 @@ export class Partida {
     if (this.nivel.camino && this.nivel.alfabeto.includes(letra)) {
       this.guardias.forEach(g => g.paso(letra));
       this.senales += letra;
+      this.senalesJugador++;
       emitio = letra;
     }
+    const mundo = this._turnoMundo();
+    return { ok: true, resultado: this._evaluar(), emitio, ...mundo };
+  }
+
+  // Un turno del mundo: los guardias despiertos patrullan y la campana (si el nivel la tiene) cuenta atrás;
+  // al llegar a 0 suena y envía su señal a todos los guardias, como una entrada más del autómata.
+  _turnoMundo() {
     const patrullaron = this._turnoGuardias();
-    return { ok: true, resultado: this._evaluar(), patrullaron, emitio };
+    let campanazo = null;
+    const c = this.nivel.campana;
+    if (c) {
+      this.campanaRestante--;
+      if (this.campanaRestante <= 0) {
+        this.guardias.forEach(g => g.paso(c.senal));
+        this.senales += c.senal;
+        this.marcasCampana.add(this.senales.length);
+        this.campanaRestante = c.cada;
+        campanazo = c.senal;
+      }
+    }
+    return { patrullaron, campanazo };
+  }
+
+  // Un turno sin que el jugador actúe (reloj de inactividad): la ronda avanza sola.
+  turno() {
+    if (this.estado !== 'jugando') return { ok: false, motivo: 'inactivo' };
+    const mundo = this._turnoMundo();
+    return { ok: true, resultado: this._evaluar(), ...mundo };
   }
 
   // Turno de los guardias: los despiertos con ruta avanzan un paso (los dormidos se quedan quietos).
@@ -94,15 +128,18 @@ export class Partida {
     if (!this.nivel.alfabeto.includes(a)) return { ok: false, motivo: 'simbolo' };
     this.guardias.forEach(g => g.paso(a));
     this.senales += a;
-    // Niveles con «costo de señal»: emitir una señal también es un turno para los guardias que patrullan.
-    const patrullaron = this.nivel.costoSenal ? this._turnoGuardias() : 0;
-    return { ok: true, resultado: this._evaluar(), patrullaron };
+    this.senalesJugador++;
+    // Niveles con «costo de señal»: emitir una señal también es un turno del mundo (patrulla y campana).
+    const mundo = this.nivel.costoSenal ? this._turnoMundo() : { patrullaron: 0, campanazo: null };
+    return { ok: true, resultado: this._evaluar(), ...mundo };
   }
 
   reiniciarGuardias() {
     if (this.estado !== 'jugando') return { ok: false, motivo: 'inactivo' };
     this.guardias.forEach(g => g.reiniciar());
     this.senales = '';
+    this.senalesJugador = 0;
+    this.marcasCampana.clear();
     return { ok: true, resultado: this._evaluar() };
   }
 }
