@@ -149,6 +149,8 @@ export class CuadernoUI {
       } else if (!a.movido) { this.pendiente = null; }
       this.dibujar(); return;
     }
+    // En la herramienta Estado, arrastrar de un estado a otro también crea una transición (como describe la Sección IX-D).
+    if (h_ === 'estado' && a.estado && a.movido && destino) { this.abrirSelector(a.estado.id, destino.id); this.dibujar(); return; }
     if (a.movido) { this.dibujar(); return; }
 
     if (h_ === 'estado') {

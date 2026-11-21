@@ -2,7 +2,7 @@
 
 Videojuego de sigilo y deducción (PWA) para aprender **Autómatas Finitos Deterministas**. Los guardias son AFD ocultos
 `M = (Q, Σ, δ, q0, F)`; el jugador deduce su comportamiento, lo dibuja en un cuaderno y el motor formal lo valida por
-equivalencia. Fuente de verdad: `Sombras_Finitas_Documento_IEEE_v3.docx` (Drive › GRUPO 6 - Teoría Computación BR).
+equivalencia. Fuente de verdad: `Sombras_Finitas_Documento_IEEE_v5.docx` (Drive › GRUPO 6 - Teoría Computación BR).
 
 ## Instalación y ejecución
 
@@ -20,8 +20,10 @@ Tras la primera visita funciona sin conexión.
 Pruebas del motor (Node ≥ 18, sin dependencias):
 
 ```bash
-node --test pruebas/motor.test.mjs
+npm test            # equivale a: node --test pruebas/*.mjs
 ```
+
+`pruebas/motor.test.mjs` cubre el motor, el juego y los datos; `pruebas/matriz.test.mjs` implementa la matriz PF01–PF14 de la Tabla XVI del documento.
 
 Regenerar íconos PNG: `node tools/generar-iconos.mjs`. Al publicar una versión nueva, cambiar `VERSION` en `sw.js`.
 
@@ -66,7 +68,7 @@ datos personales (perfil = código anónimo).
 
 ## Resultados de pruebas
 
-**Automáticas (Node, 29/29 aprobadas):** δ* y `acepta` (incl. cadena vacía y propiedad δ*(q,wa)=δ(δ*(q,w),a) exhaustiva hasta
+**Automáticas (Node, 41/41 aprobadas: 29 de motor/juego/datos + 12 de la matriz PF):** δ* y `acepta` (incl. cadena vacía y propiedad δ*(q,wa)=δ(δ*(q,w),a) exhaustiva hasta
 longitud 4 en todos los AFD), completitud, estados trampa, alcanzables, minimización (6→3 con clases esperadas), equivalencia
 (contraejemplo mínimo, simetría, contraste con fuerza bruta), validación del cuaderno (flujo alterno 2a, contraejemplo, determinismo,
 mínimo exigido), reglas del mapa (radio, sombras, paredes, salida sellada/abierta), resolubilidad de los 4 niveles, `Almacen`
@@ -79,6 +81,12 @@ por la interfaz (trampa, mínimo, pares de equivalencia con respuestas erróneas
 recargar (progreso y dibujo en IndexedDB); diagnósticos inicial/final con g = 0,75 verificada; Service Worker activo con 25 archivos en
 caché y **recarga con el servidor apagado** (juego y progreso intactos); sin desbordamiento horizontal en 320 px.
 
+## Pruebas manuales (PF10 y PF14, en el celular)
+
+- **PF10** — En el cuaderno: tocar el lienzo crea un estado; arrastrar de un estado a otro abre el selector de símbolos y crea la transición; pulsación larga alterna aceptación.
+- **PF14** — Tras la primera visita con conexión, instalar en la pantalla de inicio, activar modo avión y abrir: debe cargar y conservar el progreso.
+- Anotar fecha, dispositivo y navegador; el resultado se refleja en la Tabla XVI del documento.
+
 ## Matriz de cumplimiento (documento IEEE v3)
 
 | Req. | Implementación | Estado |
@@ -90,7 +98,7 @@ caché y **recarga con el servidor apagado** (juego y progreso intactos); sin de
 | RF05 cuaderno interactivo | `cuaderno.js`, `cuadernoUI.js` | Cumple · probado (toque/arrastre en el panel; ver límites) |
 | RF06 validación por equivalencia con retroalimentación | `cuaderno.js` | Cumple · probado |
 | RF07 niveles crecientes (4, Tabla XIV) | `niveles.json` | Cumple · probado |
-| RF08 progreso, niveles, diagramas locales | `almacen.js` | Cumple · probado |
+| RF08 progreso, niveles, diagramas locales | `almacen.js` (incluye las respuestas del reto de equivalencia en `progreso.pares_resueltos`) | Cumple · probado |
 | RNF01 offline + instalable | `sw.js`, manifiesto, íconos | Offline probado; instalación a pantalla de inicio **no probada** en un celular |
 | RNF02 interfaz táctil vertical | CSS responsive, eventos de puntero | Probado en emulación; **no en un dispositivo táctil real** |
 | RNF03 motor desacoplado | `js/motor/` sin imports de UI | Cumple · verificado por las pruebas en Node |
@@ -101,13 +109,13 @@ caché y **recarga con el servidor apagado** (juego y progreso intactos); sin de
 
 - El documento define que el guardia tiene una *conducta visible* según su estado (patrullar/vigilar/perseguir) pero no la mapea.
   Decisión: **aceptación = dormido (radio 0)**, resto = despierto (radio 2). Solo se observa aceptación, de modo que la minimización
-  tiene sentido (estados equivalentes son indistinguibles). Los guardias son puestos fijos (el documento no exige patrullas).
+  tiene sentido (estados equivalentes son indistinguibles). Los guardias son puestos fijos (el documento v5 describe esta conducta dormido/despierto en la Sección IX-E).
 - La salida se sella hasta validar el diagrama (el documento no define condición de victoria; se tomó el flujo de la Fig. 8).
-  En el nivel 4 además deben resolverse los dos pares de equivalencia; esas respuestas se guardan en `localStorage`
-  (el esquema de la Tabla X no tiene tabla para ello). Al reabrir un nivel, el diagrama guardado se revalida en silencio.
-- El documento recibido llega hasta la Sección IX; **la Sección X (pruebas del documento) y los resultados no estaban**, por lo que la
-  matriz de pruebas aquí es propia. No se revisaron los .pptx ni el video de la carpeta; el `Sombras_Finitas_Proyecto.docx` original
-  (v1) tampoco se leyó: se usó la versión IEEE v3, la más reciente.
+  En el nivel 4 además deben resolverse los dos pares de equivalencia; esas respuestas se guardan en `Almacen`
+  (columna `pares_resueltos` de la tabla `progreso`, incorporada a la Tabla X del documento v5). Al reabrir un nivel, el diagrama guardado se revalida en silencio.
+- El documento v5 incluye la Sección X (matriz PF01–PF14) y las Secciones XI–XIV; los casos PF10, PF13 y PF14 se comprobaron en
+  emulación de navegador y quedan pendientes de repetir en un teléfono físico. Los diagnósticos aún no se han aplicado a estudiantes,
+  por lo que los resultados pedagógicos no se reportan.
 - Los gestos del cuaderno se probaron con eventos de puntero del navegador y con la tabla de transición; no hay prueba en un
   teléfono físico. Las skills de diseño `taste-skill`/`impeccable`/`emil-design-eng` no se cargaron: se aplicaron criterios
   propios (paleta rojo/dorado del documento, jerarquía, objetivos táctiles ≥ 44 px, foco visible, `prefers-reduced-motion`, ARIA).

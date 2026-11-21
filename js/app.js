@@ -130,7 +130,7 @@ async function comenzarNivel(numero, { intro = true } = {}) {
   ctx.cuaderno = Cuaderno.desde(guardado, ctx.nivel.alfabeto);
   const niveles = await ctx.almacen.niveles();
   ctx.superado = niveles.find(n => n.numero === numero).estado === 'superado';
-  try { ctx.estadoPares = JSON.parse(localStorage.getItem('sf-pares-' + numero) ?? '{}'); } catch { ctx.estadoPares = {}; }
+  ctx.estadoPares = await ctx.almacen.cargarPares(numero);
   // Re-valida en silencio el diagrama guardado: si ya era correcto, la salida arranca abierta.
   ctx.diagramaOk = ctx.superado || diagramaCorrecto();
   juego.iniciar(ctx.nivel, { salidaAbierta: salidaDisponible() });
@@ -184,7 +184,7 @@ async function alValidar(resultado, serializado) {
 
 function alResolverPares(pares) {
   ctx.estadoPares = pares;
-  try { localStorage.setItem('sf-pares-' + ctx.nivel.numero, JSON.stringify(pares)); } catch { /* ignorar */ }
+  ctx.almacen.guardarPares(ctx.nivel.numero, pares).catch(() => { /* ignorar */ });
   if (ctx.diagramaOk) evaluarSalida();
   else if (paresCompletos()) toast('Reto resuelto. Falta validar tu diagrama.');
 }

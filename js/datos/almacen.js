@@ -174,7 +174,7 @@ export class Almacen {
       if (!prog.length) {
         await this.b.add('progreso', {
           id_perfil: this.perfil.id_perfil, id_nivel: fila.id_nivel,
-          estado: n.numero === 1 ? 'en_curso' : 'bloqueado', intentos: 0, fecha_superado: null
+          estado: n.numero === 1 ? 'en_curso' : 'bloqueado', intentos: 0, fecha_superado: null, pares_resueltos: '{}'
         });
       }
     }
@@ -234,6 +234,20 @@ export class Almacen {
       const ps = await this._progreso(sig.id_nivel);
       if (ps && ps.estado === 'bloqueado') { ps.estado = 'en_curso'; await this.b.put('progreso', ps); }
     }
+  }
+
+  // Respuestas del reto de equivalencia (nivel 4): se guardan en la fila de progreso como JSON.
+  async guardarPares(numero, pares) {
+    const n = await this._nivelPorNumero(numero);
+    const p = await this._progreso(n.id_nivel);
+    p.pares_resueltos = JSON.stringify(pares ?? {});
+    await this.b.put('progreso', p);
+  }
+
+  async cargarPares(numero) {
+    const n = await this._nivelPorNumero(numero);
+    const p = await this._progreso(n.id_nivel);
+    try { return JSON.parse(p?.pares_resueltos ?? '{}'); } catch { return {}; }
   }
 
   async _dibujoDe(idNivel) {
