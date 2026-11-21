@@ -198,8 +198,10 @@ export class JuegoUI {
   _renderCronologia(filas, nuevo) {
     const gs = this.partida.guardias, alf = this.nivel.alfabeto;
     const t = vaciar($('#obs-tabla'));
-    const conducta = d => h('span', { class: 'est ' + (d ? 'dormido' : 'despierto') }, h('i'), d ? 'dormido' : 'despierto');
-    t.append(h('thead', {}, h('tr', {}, h('th', { texto: 'Señal' }), h('th', { texto: 'Cadena' }), ...gs.map(g => h('th', { texto: `Guardia ${g.id}` })))));
+    const compacta = gs.length > 2;   // con 3 guardias las etiquetas se abrevian para que quepan en el celular
+    t.classList.toggle('compacta', compacta);
+    const conducta = d => h('span', { class: 'est ' + (d ? 'dormido' : 'despierto') }, h('i'), compacta ? (d ? 'dorm.' : 'desp.') : (d ? 'dormido' : 'despierto'));
+    t.append(h('thead', {}, h('tr', {}, h('th', { texto: 'Señal' }), h('th', { texto: 'Cadena' }), ...gs.map(g => h('th', { title: `Guardia ${g.id}`, texto: compacta ? g.id : `Guardia ${g.id}` })))));
     const cuerpo = h('tbody');
     const fila = (f, i, lista, extra = '') => {
       const ult = f.cadena.slice(-1), antes = f.cadena.slice(0, -1);

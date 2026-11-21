@@ -93,7 +93,7 @@
       "nombre": "Tres guardias, dos verdades",
       "tipo_reto": "equivalencia",
       "alfabeto": ["a", "b", "c"],
-      "historia": "Tres guardias, tres autómatas. Dibuja el del guardia A y luego decide: ¿A y B reconocen el mismo lenguaje? ¿Y A y C? Si difieren, entrega una cadena que los distinga.",
+      "historia": "Tres guardias, tres autómatas. Dibuja el del guardia A y luego decide: ¿A y B reconocen el mismo lenguaje? ¿Y A y C? Si difieren, entrega una cadena que los distinga. Ojo: los guardias despiertos patrullan, un paso por cada movimiento tuyo; los dormidos se quedan quietos.",
       "concepto": "Determinar si dos autómatas reconocen el mismo lenguaje.",
       "objetivo": "A",
       "pares": [["A", "B"], ["A", "C"]],
@@ -128,6 +128,7 @@
         }
       },
       "guardias": { "A": "A", "B": "B", "C": "C" },
+      "patrullas": { "A": [[3, 3]], "B": [[6, 3]], "C": [[9, 3]] },
       "mapa": [
         "#############",
         "#..A..B..C..#",

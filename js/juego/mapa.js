@@ -70,7 +70,10 @@ export class Partida {
       this.estado = 'ganado';
       return { ok: true, resultado: 'ganado' };
     }
-    return { ok: true, resultado: this._evaluar() };
+    // Turno de los guardias: los despiertos con ruta avanzan un paso (los dormidos se quedan quietos).
+    const ocupada = (x, y) => (x === this.jugador.x && y === this.jugador.y) || this.hayGuardia(x, y);
+    const patrullaron = this.guardias.filter(g => g.patrullar(ocupada)).length;
+    return { ok: true, resultado: this._evaluar(), patrullaron };
   }
 
   // Cada señal es un símbolo de Σ que todos los guardias procesan (δ).

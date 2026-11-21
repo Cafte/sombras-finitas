@@ -52,11 +52,13 @@ export class VistaMapa {
     this.reducir = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
     this.raf = 0;
     this.tmp = 0;
+    this.pos = new Map();
   }
 
   asignar(partida) {
     this.partida = partida;
     this.anim = null;
+    this.pos = new Map();   // posición dibujada de cada guardia (se desliza hacia la lógica)
     this.ajustar();
   }
 
@@ -94,6 +96,14 @@ export class VistaMapa {
     for (let y = 0; y < n.alto; y++) for (let x = 0; x < n.ancho; x++) {
       dibujarCasilla(c, n.celdas[y][x], x, y, s, t, p.salidaAbierta);
     }
+    // Rutas de patrulla (tenues): se ve por dónde caminará cada guardia despierto
+    for (const g of p.guardias) {
+      if (!g.ruta) continue;
+      c.save(); c.setLineDash([4, 5]); c.lineWidth = 2; c.lineCap = 'round';
+      c.strokeStyle = g.dormido ? 'rgba(179,163,150,.22)' : 'rgba(229,84,92,.45)';
+      c.beginPath(); g.ruta.forEach((q, i) => { const X = q.x * s + s / 2, Y = q.y * s + s / 2; if (i) c.lineTo(X, Y); else c.moveTo(X, Y); }); c.stroke();
+      c.restore();
+    }
     // Radios de ruido (casillas dentro de la distancia Manhattan, sin paredes)
     const pulso = this.reducir ? 0.5 : 0.5 + 0.5 * Math.sin(t / 380);
     for (const g of p.guardias) {
@@ -113,7 +123,11 @@ export class VistaMapa {
 
   _guardia(g, t) {
     const { c, s } = this;
-    const cx = g.x * s + s / 2, cy = g.y * s + s / 2, r = s * 0.34;
+    let vp = this.pos.get(g.id);
+    if (!vp) { vp = { x: g.x, y: g.y }; this.pos.set(g.id, vp); }
+    if (this.reducir) { vp.x = g.x; vp.y = g.y; }
+    else { vp.x += (g.x - vp.x) * 0.22; vp.y += (g.y - vp.y) * 0.22; if (Math.abs(g.x - vp.x) < 0.01) vp.x = g.x; if (Math.abs(g.y - vp.y) < 0.01) vp.y = g.y; }
+    const cx = vp.x * s + s / 2, cy = vp.y * s + s / 2, r = s * 0.34;
     const dorm = g.dormido;
     c.save();
     c.shadowColor = dorm ? 'transparent' : COL.rojo2; c.shadowBlur = dorm ? 0 : 12;
@@ -133,7 +147,7 @@ export class VistaMapa {
       c.fillStyle = '#111'; c.beginPath(); c.arc(cx, cy - r * .25, r * .12, 0, 7); c.fill();
     }
     c.fillStyle = COL.oro2; c.font = `700 ${Math.round(s * .26)}px ui-monospace, monospace`;
-    c.textAlign = 'center'; c.fillText(g.id, cx, g.y * s + s - 3); c.textAlign = 'start';
+    c.textAlign = 'center'; c.fillText(g.id, cx, vp.y * s + s - 3); c.textAlign = 'start';
   }
 
   _jugador(p, t) {

@@ -6,15 +6,29 @@ export const RADIO_DESPIERTO = 2;
 export const RADIO_DORMIDO = 0;
 
 export class Guardia {
-  constructor(id, automata, x, y) {
+  // ruta (opcional): casillas consecutivas por las que patrulla (ida y vuelta) mientras está despierto.
+  constructor(id, automata, x, y, ruta = null) {
     this.id = id;
     this.automata = automata;
-    this.x = x;
-    this.y = y;
+    this.x0 = x; this.y0 = y;
+    this.ruta = ruta && ruta.length > 1 ? ruta : null;
     this.reiniciar();
   }
 
+  // Un paso de patrulla (por turnos). Un guardia dormido no se mueve; si la casilla siguiente
+  // está ocupada (jugador u otro guardia), espera. Devuelve true si se movió.
+  patrullar(ocupada = () => false) {
+    if (!this.ruta || this.dormido) return false;
+    let dir = this.dir, j = this.i + dir;
+    if (j < 0 || j >= this.ruta.length) { dir = -dir; j = this.i + dir; }
+    const c = this.ruta[j];
+    if (ocupada(c.x, c.y)) return false;
+    this.dir = dir; this.i = j; this.x = c.x; this.y = c.y;
+    return true;
+  }
+
   reiniciar() {
+    this.x = this.x0; this.y = this.y0; this.i = 0; this.dir = 1;
     this.estado = this.automata.q0;
     this.traza = '';       // cadena de señales recibidas desde el último reinicio
     this.historial = [];   // [{ cadena, dormido }]

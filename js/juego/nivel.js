@@ -21,6 +21,7 @@ export class Nivel {
       this.automatas[id] = Automata.desdeJSON({ ...o, alfabeto: this.alfabeto });
     }
     this.mapaGuardias = datos.guardias; // { simboloEnMapa: idAutomata }
+    this.patrullas = datos.patrullas ?? {}; // { simboloEnMapa: [[x, y], ...] } puntos de paso de la ruta (opcional)
     this.inicioJugador = null;
     this.salida = null;
     this.celdas = [];
@@ -40,11 +41,28 @@ export class Nivel {
   get automataObjetivo() { return this.automatas[this.objetivoId]; }
   get estadosMinimos() { return numEstadosMinimo(this.automataObjetivo); }
 
+  // Expande los puntos de paso (alineados en ejes) a la lista de casillas de la ruta, empezando en (x, y).
+  _ruta(simbolo, x, y) {
+    const pts = this.patrullas[simbolo];
+    if (!pts?.length) return null;
+    const ruta = [{ x, y }];
+    for (const [px, py] of pts) {
+      let { x: cx, y: cy } = ruta[ruta.length - 1];
+      if (cx !== px && cy !== py) throw new Error(`Ruta del guardia ${simbolo}: tramo no alineado`);
+      while (cx !== px || cy !== py) {
+        cx += Math.sign(px - cx); cy += Math.sign(py - cy);
+        if (this.celdas[cy]?.[cx] === undefined || this.celdas[cy][cx] === '#') throw new Error(`Ruta del guardia ${simbolo}: casilla bloqueada (${cx}, ${cy})`);
+        ruta.push({ x: cx, y: cy });
+      }
+    }
+    return ruta;
+  }
+
   crearGuardias() {
     const gs = [];
     for (let y = 0; y < this.alto; y++) for (let x = 0; x < this.ancho; x++) {
       const c = this.filas[y][x];
-      if (c in this.mapaGuardias) gs.push(new Guardia(c, this.automatas[this.mapaGuardias[c]], x, y));
+      if (c in this.mapaGuardias) gs.push(new Guardia(c, this.automatas[this.mapaGuardias[c]], x, y, this._ruta(c, x, y)));
     }
     return gs;
   }

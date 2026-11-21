@@ -117,6 +117,7 @@ h1 em { color: var(--gold); font-style: italic; }
 .obs-tabla tr.previa td { opacity: .5; }
 .obs-tabla tr.sep td { text-align: center; color: var(--muted); font-size: .7rem; letter-spacing: .06em; text-transform: uppercase; background: var(--bg-2); }
 .obs-tabla td.cad { font-family: var(--mono); color: var(--muted); } .obs-tabla td.cad b { color: var(--gold-2); } .cad-ant { color: var(--muted); }
+.obs-tabla.compacta th, .obs-tabla.compacta td { padding: 4px 6px; } .obs-tabla.compacta .est { gap: 4px; font-size: .8rem; } .obs-tabla.compacta .delta { margin-left: 2px; }
 .delta { margin-left: 5px; font-size: .7rem; } .delta.dur { color: var(--ok); } .delta.des { color: var(--red-2); }
 .obs-conducta { padding: 8px 12px; display: grid; gap: 10px; }
 .obs-conducta .vacio { color: var(--muted); text-align: center; margin: 0; }
