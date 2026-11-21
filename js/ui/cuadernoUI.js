@@ -6,9 +6,15 @@ import { equivalentes } from '../motor/equivalencia.js';
 
 const R = 22;            // radio de los estados (px)
 const LARGA_MS = 450;    // pulsación larga = alternar aceptación
+const DUR = { pop: 340, acepta: 260, ini: 260 };   // duración de las animaciones (ms)
+const ONDA_MS = 480;
+const easeOut = t => 1 - (1 - t) ** 3;
+const easeOutBack = t => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * (t - 1) ** 3 + c1 * (t - 1) ** 2; };
+const reducido = () => !!globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+const vibrar = ms => { try { navigator.vibrate?.(ms); } catch { /* sin vibración */ } };
 
 const AYUDA = {
-  estado: 'Toca una zona vacía del lienzo para crear un estado.',
+  estado: 'Toca el lienzo para crear un estado (verás una vista previa; puedes arrastrarla antes de soltar). Arrastra de un estado a otro para crear una transición.',
   transicion: 'Arrastra de un estado a otro (o toca origen y luego destino; el mismo estado crea un lazo) y elige el símbolo.',
   mover: 'Arrastra un estado para reubicarlo.',
   inicial: 'Toca el estado que será q₀ (el estado inicial).',
@@ -27,6 +33,11 @@ export class CuadernoUI {
     this.arista = null;         // { origen, destino } con selector abierto
     this.etiquetasHit = [];
     this.guardaTimer = 0;
+    this.anims = new Map();     // id de estado -> { pop|acepta|ini: t0 }
+    this.ondas = [];            // ondas de feedback { x, y, t0, color }
+    this.fantasma = null;       // vista previa del estado que se va a crear
+    this.dentro = null;         // id del estado destino resaltado al arrastrar una transición
+    this._raf = 0;
 
     $$('.herr').forEach(b => b.addEventListener('click', () => this.setHerramienta(b.dataset.herr)));
     $('#selector-listo').addEventListener('click', () => this.cerrarSelector());
@@ -39,6 +50,7 @@ export class CuadernoUI {
     cv.addEventListener('pointermove', e => this.alMover(e));
     cv.addEventListener('pointerup', e => this.alSoltar(e));
     cv.addEventListener('pointercancel', () => this.cancelar());
+    cv.addEventListener('pointerleave', () => { if (!this.arrastre && this.fantasma) { this.fantasma = null; this.dibujar(); } });
     globalThis.addEventListener('resize', () => { if (this.nivel && $('#pantalla-cuaderno').classList.contains('activa')) this.ajustar(); });
   }
 
@@ -96,6 +108,38 @@ export class CuadernoUI {
   }
   puntero(ev) { const r = this.canvas.getBoundingClientRect(); return { x: ev.clientX - r.left, y: ev.clientY - r.top }; }
 
+  /* ---------- Animación ---------- */
+  _animar() { if (!this._raf) this._raf = requestAnimationFrame(() => { this._raf = 0; this.dibujar(); if (this.anims.size || this.ondas.length) this._animar(); }); }
+  _anim(id, tipo) { if (reducido()) return; const a = this.anims.get(id) ?? {}; a[tipo] = performance.now(); this.anims.set(id, a); this._animar(); }
+  _onda(x, y, color = '#f2c978') { if (reducido()) return; this.ondas.push({ x, y, t0: performance.now(), color }); this._animar(); }
+
+  // Si el nuevo estado quedaría encima de otro, lo empuja hasta una posición libre.
+  _separar(p) {
+    const need = 2 * R + 10;
+    let { x, y } = p;
+    for (let i = 0; i < 14; i++) {
+      let m = null;
+      for (const e of this.cuaderno.estados) {
+        const q = this.px(e), d = Math.hypot(x - q.x, y - q.y);
+        if (d < need && (!m || d < m.d)) m = { q, d };
+      }
+      if (!m) break;
+      const ang = m.d > 0.5 ? Math.atan2(y - m.q.y, x - m.q.x) : Math.random() * Math.PI * 2;
+      x = Math.min(Math.max(m.q.x + Math.cos(ang) * need, R + 4), this.w - R - 4);
+      y = Math.min(Math.max(m.q.y + Math.sin(ang) * need, R + 18), this.hgt - R - 4);
+    }
+    return { x, y };
+  }
+
+  _crearEstado(p) {
+    const q = this._separar(p);
+    const n = this.aNorm(q.x, q.y);
+    const e = this.cuaderno.agregarEstado(n.x, n.y);
+    if (this.cuaderno.estados.length === 1) { this.cuaderno.marcarInicial(e.id); this._anim(e.id, 'ini'); }
+    this._anim(e.id, 'pop'); this._onda(q.x, q.y);
+    sonido.toque(); vibrar(12); this.cambiado(); this.ctx.anunciar(`Estado ${e.etiqueta} creado`);
+  }
+
   /* ---------- Eventos de puntero (unifican toque y ratón) ---------- */
   alBajar(ev) {
     if (!this.cuaderno) return;
@@ -104,12 +148,14 @@ export class CuadernoUI {
     const p = this.puntero(ev);
     const est = this.estadoEn(p.x, p.y);
     this.arrastre = { id: ev.pointerId, inicio: p, actual: p, estado: est, movido: false, larga: false };
+    if (this.herr === 'estado' && !est) { this.fantasma = this._separar(p); this.dibujar(); }
     if (est) {
       this.arrastre.timer = setTimeout(() => {
         if (this.arrastre && !this.arrastre.movido && this.arrastre.estado === est) {
           this.arrastre.larga = true;
           this.cuaderno.alternarAceptacion(est.id);
-          sonido.toque(); this.cambiado();
+          if (est.aceptacion) this._anim(est.id, 'acepta');
+          sonido.toque(); vibrar(18); this.cambiado();
           this.ctx.anunciar(`${est.etiqueta} ${est.aceptacion ? 'es' : 'ya no es'} estado de aceptación`);
         }
       }, LARGA_MS);
@@ -118,9 +164,18 @@ export class CuadernoUI {
 
   alMover(ev) {
     const a = this.arrastre;
+    if (!a && ev.pointerType === 'mouse' && this.herr === 'estado' && this.cuaderno) {
+      const q = this.puntero(ev);
+      this.fantasma = this.estadoEn(q.x, q.y) ? null : this._separar(q);
+      this.dibujar(); return;
+    }
     if (!a || a.id !== ev.pointerId) return;
     const p = this.puntero(ev);
     a.actual = p;
+    if (this.herr === 'estado' && !a.estado) this.fantasma = this._separar(p);
+    const arrastraArista = (this.herr === 'transicion' || this.herr === 'estado') && a.estado && a.movido;
+    const sobre = arrastraArista ? this.estadoEn(p.x, p.y) : null;
+    if ((sobre?.id ?? null) !== this.dentro) { this.dentro = sobre?.id ?? null; if (this.dentro != null) vibrar(6); }
     if (Math.hypot(p.x - a.inicio.x, p.y - a.inicio.y) > 8) { a.movido = true; clearTimeout(a.timer); }
     if (this.herr === 'mover' && a.estado && a.movido) {
       const n = this.aNorm(p.x, p.y);
@@ -133,7 +188,7 @@ export class CuadernoUI {
     const a = this.arrastre;
     if (!a || a.id !== ev.pointerId) return;
     clearTimeout(a.timer);
-    this.arrastre = null;
+    this.arrastre = null; this.fantasma = null; this.dentro = null;
     const p = this.puntero(ev);
     if (a.larga) { this.dibujar(); return; }
     const destino = this.estadoEn(p.x, p.y);
@@ -151,21 +206,18 @@ export class CuadernoUI {
     }
     // En la herramienta Estado, arrastrar de un estado a otro también crea una transición (como describe la Sección IX-D).
     if (h_ === 'estado' && a.estado && a.movido && destino) { this.abrirSelector(a.estado.id, destino.id); this.dibujar(); return; }
+    // Herramienta Estado: el estado se crea donde se suelta, aunque se haya arrastrado la vista previa.
+    if (h_ === 'estado' && !a.estado) { if (!destino) this._crearEstado(p); this.dibujar(); return; }
     if (a.movido) { this.dibujar(); return; }
 
     if (h_ === 'estado') {
-      if (!destino) {
-        const n = this.aNorm(p.x, p.y);
-        const e = this.cuaderno.agregarEstado(n.x, n.y);
-        if (this.cuaderno.estados.length === 1) this.cuaderno.marcarInicial(e.id);
-        sonido.toque(); this.cambiado(); this.ctx.anunciar(`Estado ${e.etiqueta} creado`);
-      }
+      // toque sobre un estado existente: nada
     } else if (h_ === 'inicial') {
-      if (destino) { this.cuaderno.marcarInicial(destino.id); sonido.toque(); this.cambiado(); this.ctx.anunciar(`${destino.etiqueta} es el estado inicial`); }
+      if (destino) { this.cuaderno.marcarInicial(destino.id); this._anim(destino.id, 'ini'); sonido.toque(); vibrar(10); this.cambiado(); this.ctx.anunciar(`${destino.etiqueta} es el estado inicial`); }
     } else if (h_ === 'final') {
-      if (destino) { const e = this.cuaderno.alternarAceptacion(destino.id); sonido.toque(); this.cambiado(); this.ctx.anunciar(`${e.etiqueta} ${e.aceptacion ? 'es' : 'ya no es'} estado de aceptación`); }
+      if (destino) { const e = this.cuaderno.alternarAceptacion(destino.id); if (e.aceptacion) this._anim(e.id, 'acepta'); sonido.toque(); vibrar(18); this.cambiado(); this.ctx.anunciar(`${e.etiqueta} ${e.aceptacion ? 'es' : 'ya no es'} estado de aceptación`); }
     } else if (h_ === 'borrar') {
-      if (destino) { this.cuaderno.eliminarEstado(destino.id); sonido.toque(); this.cambiado(); }
+      if (destino) { const q = this.px(destino); this._onda(q.x, q.y, '#e5545c'); this.cuaderno.eliminarEstado(destino.id); sonido.toque(); vibrar(25); this.cambiado(); }
       else {
         const hit = this.etiquetasHit.find(l => Math.hypot(l.x - p.x, l.y - p.y) < 18);
         if (hit) {
@@ -177,7 +229,7 @@ export class CuadernoUI {
     this.dibujar();
   }
 
-  cancelar() { if (this.arrastre) clearTimeout(this.arrastre.timer); this.arrastre = null; this.dibujar(); }
+  cancelar() { if (this.arrastre) clearTimeout(this.arrastre.timer); this.arrastre = null; this.fantasma = null; this.dentro = null; this.dibujar(); }
 
   /* ---------- Selector de símbolo ---------- */
   abrirSelector(origen, destino) {
@@ -223,28 +275,76 @@ export class CuadernoUI {
 
     // arista en construcción (arrastre)
     const ar = this.arrastre;
-    if (this.herr === 'transicion' && ar?.estado && ar.movido) {
+    if ((this.herr === 'transicion' || this.herr === 'estado') && ar?.estado && ar.movido) {
       const p0 = this.px(ar.estado);
       c.strokeStyle = '#f2c978'; c.setLineDash([6, 5]); c.lineWidth = 2;
       c.beginPath(); c.moveTo(p0.x, p0.y); c.lineTo(ar.actual.x, ar.actual.y); c.stroke(); c.setLineDash([]);
     }
 
+    // ondas de feedback (crear / borrar)
+    const ahora = performance.now();
+    this.ondas = this.ondas.filter(o => ahora - o.t0 < ONDA_MS);
+    for (const o of this.ondas) {
+      const t = easeOut((ahora - o.t0) / ONDA_MS);
+      c.save(); c.globalAlpha = 0.55 * (1 - t); c.strokeStyle = o.color; c.lineWidth = 3;
+      c.beginPath(); c.arc(o.x, o.y, R * (0.6 + 1.7 * t), 0, 7); c.stroke(); c.restore();
+    }
+
     for (const e of cu.estados) {
       const p = this.px(e);
       const sel = e.id === this.pendiente || (this.arista && (this.arista.origen === e.id || this.arista.destino === e.id));
+      let k = 1, kAc = 1, kIni = 1;
+      const an = this.anims.get(e.id);
+      if (an) {
+        for (const tipo of Object.keys(an)) {
+          const t = (ahora - an[tipo]) / DUR[tipo];
+          if (t >= 1) delete an[tipo];
+          else if (tipo === 'pop') k = easeOutBack(t);
+          else if (tipo === 'acepta') kAc = easeOut(t);
+          else kIni = easeOut(t);
+        }
+        if (!Object.keys(an).length) this.anims.delete(e.id);
+      }
+      const levantado = this.herr === 'mover' && ar?.estado?.id === e.id && ar.movido;
+      const r = R * Math.max(k, 0.01) * (levantado ? 1.12 : 1);
       if (e.inicial) {
+        c.save(); c.globalAlpha = kIni; c.translate(-(1 - kIni) * 18, 0);
         c.strokeStyle = '#f2c978'; c.fillStyle = '#f2c978'; c.lineWidth = 2.5;
         c.beginPath(); c.moveTo(p.x - R - 30, p.y); c.lineTo(p.x - R - 3, p.y); c.stroke();
         this._punta(p.x - R - 3, p.y, 0);
+        c.restore();
       }
-      c.beginPath(); c.arc(p.x, p.y, R, 0, 7);
+      if (this.dentro === e.id) {
+        c.save(); c.globalAlpha = 0.8; c.strokeStyle = '#f2c978'; c.lineWidth = 3;
+        c.beginPath(); c.arc(p.x, p.y, R + 8, 0, 7); c.stroke(); c.restore();
+      }
+      c.save();
+      if (levantado) { c.shadowColor = 'rgba(242,201,120,.65)'; c.shadowBlur = 16; }
+      c.beginPath(); c.arc(p.x, p.y, r, 0, 7);
       c.fillStyle = sel ? '#4a2a33' : '#27181f'; c.fill();
       c.lineWidth = sel ? 3 : 2; c.strokeStyle = sel ? '#e5545c' : '#d9a94a'; c.stroke();
-      if (e.aceptacion) { c.beginPath(); c.arc(p.x, p.y, R - 5, 0, 7); c.lineWidth = 2; c.strokeStyle = '#d9a94a'; c.stroke(); }
+      c.restore();
+      if (e.aceptacion) {
+        c.save(); c.globalAlpha = 0.35 + 0.65 * kAc;
+        c.beginPath(); c.arc(p.x, p.y, (r - 5) + (1 - kAc) * 9, 0, 7); c.lineWidth = 2; c.strokeStyle = '#d9a94a'; c.stroke(); c.restore();
+      }
+      c.save(); c.globalAlpha = Math.min(1, Math.max(0, k));
       c.fillStyle = '#f3eadd'; c.font = '600 14px ui-monospace, Consolas, monospace';
       c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(e.etiqueta, p.x, p.y + 1);
+      c.restore();
     }
-    if (cu.estados.length === 0) {
+
+    // vista previa del estado que se va a crear
+    if (this.fantasma && this.herr === 'estado') {
+      const f = this.fantasma;
+      c.save(); c.globalAlpha = 0.65; c.setLineDash([5, 4]);
+      c.beginPath(); c.arc(f.x, f.y, R, 0, 7); c.fillStyle = 'rgba(217,169,74,.14)'; c.fill();
+      c.lineWidth = 2; c.strokeStyle = '#f2c978'; c.stroke(); c.setLineDash([]);
+      c.fillStyle = '#f2c978'; c.font = '600 14px ui-monospace, Consolas, monospace';
+      c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(cu._etiquetaLibre(), f.x, f.y + 1);
+      c.restore();
+    }
+    if (cu.estados.length === 0 && !this.fantasma) {
       c.fillStyle = '#b3a396'; c.font = '14px system-ui, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
       c.fillText('Toca aquí para crear tu primer estado', this.w / 2, this.hgt / 2);
     }

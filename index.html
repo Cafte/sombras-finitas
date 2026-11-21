@@ -70,8 +70,15 @@
       <div id="mapa-aviso" class="mapa-aviso" hidden></div>
     </div>
     <div class="obs" aria-label="Observaciones de los guardias">
-      <div class="obs-cab"><span>Bitácora de guardias</span><span id="obs-traza" class="mono"></span></div>
-      <div class="obs-tabla-caja"><table id="obs-tabla" class="obs-tabla"></table></div>
+      <div class="obs-cab"><span>Bitácora</span>
+        <div class="obs-vistas" role="group" aria-label="Vista de la bitácora">
+          <button type="button" class="obs-vista" data-vista="cron" aria-pressed="true">Cronología</button>
+          <button type="button" class="obs-vista" data-vista="conducta" aria-pressed="false">Por conducta</button>
+        </div>
+      </div>
+      <div id="obs-traza" class="obs-traza mono" aria-label="Señales emitidas"></div>
+      <div class="obs-tabla-caja"><table id="obs-tabla" class="obs-tabla"></table><div id="obs-conducta" class="obs-conducta" hidden></div></div>
+      <div id="obs-detalle" class="obs-detalle" aria-live="polite" hidden></div>
     </div>
     <div class="controles">
       <div class="dpad" role="group" aria-label="Mover al jugador">

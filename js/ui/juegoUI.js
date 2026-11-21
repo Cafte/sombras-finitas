@@ -13,6 +13,11 @@ export class JuegoUI {
     this.vista = new VistaMapa($('#lienzo-mapa'));
     this.partida = null;
     this.avisoTimer = 0;
+    this.vistaBit = 'cron';   // cron | conducta
+    this.previas = [];        // tandas anteriores al último reinicio de guardias
+    this._cache = null;       // filas de la bitácora en el último render
+    this.selBit = null;       // fila elegida { cadena, dorm }
+    $$('.obs-vista').forEach(b => b.addEventListener('click', () => { this.vistaBit = b.dataset.vista; this.renderBitacora(); }));
 
     $$('[data-mov]').forEach(b => b.addEventListener('click', () => this.mover(b.dataset.mov)));
     $('#btn-pausa').addEventListener('click', () => this.pausa());
@@ -29,13 +34,14 @@ export class JuegoUI {
   iniciar(nivel, { salidaAbierta }) {
     this.nivel = nivel;
     this.partida = new Partida(nivel);
+    this.previas = []; this._cache = null; this.selBit = null;
     this.partida.salidaAbierta = salidaAbierta;
     $('#juego-titulo').textContent = `Nivel ${nivel.numero} · ${nivel.nombre}`;
     const sg = vaciar($('#juego-sigma'));
     sg.append(h('span', { class: 'mono', texto: 'Σ' }), ...nivel.alfabeto.map(a => h('span', { texto: a })));
     const fila = vaciar($('#juego-senales'));
     nivel.alfabeto.forEach((a, i) => fila.append(h('button', {
-      type: 'button', class: 'btn-senal', 'aria-label': `Emitir señal ${a}`, onclick: () => this.senal(a, i)
+      type: 'button', class: 'btn-senal s' + (i % 3), 'aria-label': `Emitir señal ${a}`, onclick: () => this.senal(a, i)
     }, a, h('small', { texto: 'señal' }))));
     this.activar();
   }
@@ -85,7 +91,7 @@ export class JuegoUI {
     const despues = p.guardias.map(g => g.dormido);
     if (despues.some((d, k) => d && !antes[k])) setTimeout(() => sonido.dormir(), 120);
     else if (despues.some((d, k) => !d && antes[k])) setTimeout(() => sonido.despertar(), 120);
-    this.renderBitacora();
+    this.renderBitacora(true);
     this.resolver(r.resultado);
   }
 
@@ -143,20 +149,126 @@ export class JuegoUI {
   }
 
   /* ---------- Bitácora ---------- */
-  renderBitacora() {
+  _filas() {
+    const gs = this.partida.guardias;
+    const filas = [{ cadena: '', dorm: gs.map(g => g.automata.F.has(g.automata.q0)) }];
+    gs[0].historial.forEach((x, i) => filas.push({ cadena: x.cadena, dorm: gs.map(g => g.historial[i].dormido) }));
+    return filas;
+  }
+
+  _elegir(cadena, dorm) {
+    const igual = this.selBit && this.selBit.cadena === cadena;
+    this.selBit = igual ? null : { cadena, dorm };
+    this.renderBitacora();
+  }
+
+  renderBitacora(nuevo = false) {
     const p = this.partida;
+    const gs = p.guardias, alf = this.nivel.alfabeto;
+    const filas = this._filas();
+
+    // Si los guardias se reiniciaron, la tanda anterior se conserva (atenuada) en vez de perderse.
+    const c = this._cache;
+    if (c && c.length > 1 && (filas.length < c.length || c.some((f, k) => k < filas.length && f.cadena !== filas[k].cadena))) {
+      this.previas = [c, ...this.previas].slice(0, 2);
+      this.selBit = null;
+    }
+    this._cache = filas;
+
+    // Cinta de señales: la última resaltada
+    const tr = vaciar($('#obs-traza'));
+    if (!p.senales) tr.append(h('span', { class: 'tr-vacio', texto: 'ε · sin señales (guardias en q₀)' }));
+    else [...p.senales].forEach((a, i, arr) => tr.append(h('span', { class: `tr-chip s${alf.indexOf(a) % 3}${i === arr.length - 1 ? ' ultimo' : ''}`, texto: a })));
+    tr.scrollLeft = tr.scrollWidth;
+
+    $$('.obs-vista').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.vista === this.vistaBit)));
+    const caja = $('.obs-tabla-caja');
+    const scroll = caja.scrollTop;
+    const tabla = $('#obs-tabla'), cond = $('#obs-conducta');
+    tabla.hidden = this.vistaBit !== 'cron';
+    cond.hidden = this.vistaBit !== 'conducta';
+    if (this.vistaBit === 'cron') this._renderCronologia(filas, nuevo);
+    else this._renderConducta(filas);
+    caja.scrollTop = nuevo ? 0 : scroll;
+    this._renderDetalle();
+  }
+
+  _cadenaCorta(w) { return w === '' ? 'ε' : (w.length > 9 ? '…' + w.slice(-8) : w); }
+
+  _renderCronologia(filas, nuevo) {
+    const gs = this.partida.guardias, alf = this.nivel.alfabeto;
     const t = vaciar($('#obs-tabla'));
-    $('#obs-traza').textContent = p.senales ? p.senales : 'sin señales (q₀)';
-    const gs = p.guardias;
-    const conducta = (dormido) => h('span', { class: 'est ' + (dormido ? 'dormido' : 'despierto') }, h('i'), dormido ? 'dormido' : 'despierto');
-    t.append(h('thead', {}, h('tr', {}, h('th', { texto: 'Cadena' }), ...gs.map(g => h('th', { texto: `Guardia ${g.id}` })))));
-    const filas = [{ cadena: 'ε', dorm: gs.map(g => g.automata.F.has(g.automata.q0)) }];
-    const hist = gs[0].historial;
-    hist.forEach((_, i) => filas.push({ cadena: hist[i].cadena, dorm: gs.map(g => g.historial[i].dormido) }));
+    const conducta = d => h('span', { class: 'est ' + (d ? 'dormido' : 'despierto') }, h('i'), d ? 'dormido' : 'despierto');
+    t.append(h('thead', {}, h('tr', {}, h('th', { texto: 'Señal' }), h('th', { texto: 'Cadena' }), ...gs.map(g => h('th', { texto: `Guardia ${g.id}` })))));
     const cuerpo = h('tbody');
-    [...filas].reverse().slice(0, 40).forEach(f => cuerpo.append(h('tr', {}, h('td', { texto: f.cadena }), ...f.dorm.map(d => h('td', {}, conducta(d))))));
+    const fila = (f, i, lista, extra = '') => {
+      const ult = f.cadena.slice(-1), antes = f.cadena.slice(0, -1);
+      const sel = this.selBit?.cadena === f.cadena && !extra;
+      const tr = h('tr', {
+        class: `fila ${extra}${sel ? ' sel' : ''}${nuevo && !extra && i === lista.length - 1 ? ' nueva' : ''}`,
+        tabindex: '0', role: 'button', 'aria-pressed': String(sel),
+        'aria-label': `Cadena ${f.cadena || 'ε'}: ${f.dorm.map((d, k) => `guardia ${gs[k].id} ${d ? 'dormido' : 'despierto'}`).join(', ')}`,
+        onclick: () => this._elegir(f.cadena, f.dorm),
+        onkeydown: e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this._elegir(f.cadena, f.dorm); } }
+      },
+      h('td', {}, f.cadena === '' ? h('span', { class: 'tr-vacio', texto: 'inicio' }) : h('span', { class: `tr-chip s${alf.indexOf(ult) % 3} ultimo`, texto: ult })),
+      h('td', { class: 'cad' }, f.cadena === '' ? 'ε' : h('span', {}, h('span', { class: 'cad-ant', texto: antes.length > 8 ? '…' + antes.slice(-8) : antes }), h('b', { texto: ult }))),
+      ...f.dorm.map((d, k) => {
+        const cambio = i > 0 && lista[i - 1].dorm[k] !== d;
+        return h('td', { class: cambio && nuevo && !extra && i === lista.length - 1 ? 'pulso' : '' }, conducta(d),
+          cambio && h('b', { class: 'delta ' + (d ? 'dur' : 'des'), 'aria-hidden': 'true', title: d ? 'se durmió' : 'se despertó', texto: d ? '▼' : '▲' }));
+      }));
+      return tr;
+    };
+    [...filas.keys()].reverse().slice(0, 40).forEach(i => cuerpo.append(fila(filas[i], i, filas)));
+    this.previas.forEach(prev => {
+      cuerpo.append(h('tr', { class: 'sep' }, h('td', { colspan: String(gs.length + 2), texto: 'Antes del reinicio' })));
+      [...prev.keys()].reverse().slice(0, 10).forEach(i => cuerpo.append(fila(prev[i], i, prev, 'previa')));
+    });
     t.append(cuerpo);
-    if (filas.length === 1) cuerpo.append(h('tr', {}, h('td', { class: 'vacio', colspan: String(gs.length + 1), texto: `Envía una señal (${this.nivel.alfabeto.join(', ')}) y observa cómo reaccionan.` })));
+    if (filas.length === 1 && !this.previas.length) cuerpo.prepend(h('tr', {}, h('td', { class: 'vacio', colspan: String(gs.length + 2), texto: `Envía una señal (${alf.join(', ')}) y observa cómo reaccionan.` })));
+  }
+
+  // Vista por conducta: qué cadenas duermen o despiertan a cada guardia (las más cortas primero).
+  _renderConducta(filas) {
+    const gs = this.partida.guardias;
+    const cont = vaciar($('#obs-conducta'));
+    const todas = [...filas, ...this.previas.flat()];
+    const unicas = new Map();
+    todas.forEach(f => { if (!unicas.has(f.cadena)) unicas.set(f.cadena, f); });
+    const lista = [...unicas.values()].sort((a, b) => a.cadena.length - b.cadena.length);
+    if (lista.length === 1 && lista[0].cadena === '' && !this.previas.length && filas.length === 1) {
+      cont.append(h('p', { class: 'vacio', texto: 'Aún no hay observaciones. Emite señales para llenar esta vista.' }));
+    }
+    gs.forEach((g, k) => {
+      const chips = dorm => {
+        const sel = lista.filter(f => f.dorm[k] === dorm);
+        const caja = h('div', { class: 'cond-chips' }, ...sel.slice(0, 16).map(f => h('button', {
+          type: 'button', class: 'cad-chip' + (this.selBit?.cadena === f.cadena ? ' sel' : ''), texto: f.cadena === '' ? 'ε' : this._cadenaCorta(f.cadena),
+          'aria-label': `Cadena ${f.cadena || 'ε'}`, onclick: () => this._elegir(f.cadena, f.dorm)
+        })));
+        if (sel.length > 16) caja.append(h('span', { class: 'tr-vacio', texto: `+${sel.length - 16} más` }));
+        if (!sel.length) caja.append(h('span', { class: 'tr-vacio', texto: 'ninguna todavía' }));
+        return caja;
+      };
+      cont.append(h('div', { class: 'cond-g' }, h('b', { texto: `Guardia ${g.id}` }),
+        h('div', { class: 'cond-fila' }, h('span', { class: 'est dormido' }, h('i'), 'Dormido (acepta)'), chips(true)),
+        h('div', { class: 'cond-fila' }, h('span', { class: 'est despierto' }, h('i'), 'Despierto (rechaza)'), chips(false))));
+    });
+  }
+
+  _renderDetalle() {
+    const d = $('#obs-detalle');
+    if (!this.selBit) { d.hidden = true; return; }
+    const { cadena, dorm } = this.selBit;
+    const gs = this.partida.guardias;
+    vaciar(d);
+    d.append(h('span', { class: 'det-txt' }, h('b', { class: 'mono', texto: `«${cadena || 'ε'}»` }), ' → ',
+      gs.map((g, k) => `${g.id}: ${dorm[k] ? 'dormido' : 'despierto'}`).join(' · '),
+      h('small', { texto: ' (dormido = estado de aceptación)' })),
+    h('button', { type: 'button', class: 'btn btn-peq', texto: 'Probar en mi cuaderno', onclick: () => this.ctx.probarEnCuaderno(cadena) }),
+    h('button', { type: 'button', class: 'btn-icono det-x', 'aria-label': 'Cerrar detalle', texto: '✕', onclick: () => { this.selBit = null; this.renderBitacora(); } }));
+    d.hidden = false;
   }
 }
 

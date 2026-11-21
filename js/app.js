@@ -218,6 +218,12 @@ async function alDescubrir(partida) {
 /* ---------- Instancias de pantallas ---------- */
 Object.assign(ctx, { ir, modal, modalAbierto, anunciar, toast, actualizarSonido, abrirCuaderno, alGanar, alDescubrir, alValidar, alResolverPares,
   guardarDibujo: (ser) => ctx.almacen.guardarDibujo(ctx.nivel.numero, ser) });
+function probarEnCuaderno(cadena) {
+  abrirCuaderno();
+  $('#simular-entrada').value = cadena;
+  cuadernoUI.simular(cadena);
+}
+ctx.probarEnCuaderno = probarEnCuaderno;
 const juego = new JuegoUI(ctx);
 const cuadernoUI = new CuadernoUI(ctx);
 const diag = new DiagnosticoUI(ctx);

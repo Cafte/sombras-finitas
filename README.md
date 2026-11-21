@@ -31,10 +31,10 @@ Regenerar íconos PNG: `node tools/generar-iconos.mjs`. Al publicar una versión
 
 1. **Observa.** Cada botón de señal (a, b, c) emite un símbolo de Σ; todos los guardias aplican su δ.
 2. Guardia en estado de **aceptación = dormido** (no detecta). Cualquier otro estado = **despierto**: detecta a ≤ 2 casillas
-   (distancia Manhattan). Las **sombras** moradas te ocultan. La **bitácora** registra qué cadena produjo qué conducta.
+   (distancia Manhattan). Las **sombras** moradas te ocultan. La **bitácora** muestra una cinta con las señales emitidas (cada símbolo con su color; la última resaltada) y una cronología con ▼/▲ cuando un guardia se duerme o se despierta; la vista «Por conducta» agrupa las cadenas que lo duermen o despiertan, la tanda anterior al reinicio se conserva atenuada y al tocar una fila puedes probar esa cadena en tu cuaderno.
    «Reiniciar guardias» los devuelve a q₀.
 3. **Dibuja** en el cuaderno: herramientas Estado / Transición / Mover / Inicial / Aceptación / Borrar (pulsación larga
-   sobre un estado = alternar aceptación). La tabla de transición es editable y sirve de alternativa accesible al lienzo.
+   sobre un estado = alternar aceptación; al crear un estado se ve una vista previa que puedes arrastrar antes de soltar, y si queda sobre otro se separa solo). La tabla de transición es editable y sirve de alternativa accesible al lienzo.
    Puedes simular cadenas sobre tu diagrama.
 4. **Valida.** Si el diagrama está incompleto se indica qué falta; si no es equivalente se muestra un **contraejemplo mínimo**.
 5. Con el diagrama correcto la **salida se abre**; llega a ella. Teclado: flechas, `a b c`, `r`, `n`, `Esc`.
