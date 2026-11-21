@@ -26,8 +26,18 @@ export function elegirNota(acorde, anterior = null, azar = Math.random) {
   return pool[Math.min(pool.length - 1, Math.max(0, i + paso))];
 }
 
+// Volumen elegido por el jugador (0..1). La ganancia sigue una curva cuadrática, que se percibe más uniforme.
+export const GANANCIA_MAX = 0.6;
+export const VOLUMEN_INICIAL = 0.85;
+export const ganancia = v => GANANCIA_MAX * Math.min(1, Math.max(0, v)) ** 2;
+
 let activa = true;
-try { activa = localStorage.getItem('sf-musica') !== '0'; } catch { /* sin almacenamiento */ }
+let volumen = VOLUMEN_INICIAL;
+try {
+  activa = localStorage.getItem('sf-musica') !== '0';
+  const g = parseFloat(localStorage.getItem('sf-musica-vol'));
+  if (Number.isFinite(g)) volumen = Math.min(1, Math.max(0, g));
+} catch { /* sin almacenamiento */ }
 
 export class Musica {
   constructor(contexto = null, { azar = Math.random } = {}) {
@@ -41,7 +51,7 @@ export class Musica {
     this.ultima = null;         // última nota de la melodía
     this.timer = 0;
     this.corriendo = false;
-    this.volMaestro = 0.22;   // música de fondo: por debajo de los efectos
+    this.volMaestro = ganancia(volumen);
   }
 
   _construir() {
@@ -101,6 +111,16 @@ export class Musica {
     this.maestro.gain.cancelScheduledValues(ahora);
     this.maestro.gain.setValueAtTime(this.maestro.gain.value, ahora);
     this.maestro.gain.linearRampToValueAtTime(0.0001, ahora + fundido);
+  }
+
+  setVolumen(v) {
+    this.volMaestro = ganancia(v);
+    if (!this.maestro || !this.corriendo) return;
+    // Se cancela lo programado (p. ej. la entrada suave) para que el deslizador mande de inmediato.
+    const g = this.maestro.gain, ahora = this.ctx.currentTime;
+    g.cancelScheduledValues(ahora);
+    g.setValueAtTime(g.value, ahora);
+    g.setTargetAtTime(Math.max(0.0001, this.volMaestro), ahora, 0.08);
   }
 
   // 0 = calma, 1 = máxima tensión (guardias despiertos cerca, campana a punto de sonar)
@@ -201,7 +221,13 @@ export const musica = {
   },
   arrancar() { m.arrancar(); },            // debe llamarse dentro de un gesto del usuario (política de autoplay)
   tension(v) { m.tension(v); },
-  get info() { return { corriendo: m.corriendo, estado: m.ctx?.state ?? null, tension: +m.t.toFixed(2), objetivo: +m.tObjetivo.toFixed(2) }; },
+  get volumen() { return volumen; },
+  set volumen(v) {
+    volumen = Math.min(1, Math.max(0, Number(v) || 0));
+    try { localStorage.setItem('sf-musica-vol', String(volumen)); } catch { /* ignorar */ }
+    m.setVolumen(volumen);
+  },
+  get info() { return { corriendo: m.corriendo, estado: m.ctx?.state ?? null, volumen, ganancia: m.maestro ? +m.maestro.gain.value.toFixed(3) : null, tension: +m.t.toFixed(2), objetivo: +m.tObjetivo.toFixed(2) }; },
   ocultar() { if (m.corriendo) { m.ctx.suspend?.().catch(() => {}); pausadaPorOcultar = true; } },
   mostrar() { if (pausadaPorOcultar && m.ctx) { m.ctx.resume?.().catch(() => {}); pausadaPorOcultar = false; } }
 };

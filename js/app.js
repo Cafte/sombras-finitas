@@ -316,6 +316,9 @@ async function arrancar() {
   $('#btn-ayuda').addEventListener('click', () => ir('ayuda'));
   $('#btn-sonido').addEventListener('click', () => { sonido.alternar(); actualizarSonido(); });
   $('#btn-musica').addEventListener('click', () => { musica.alternar(); actualizarMusica(); });
+  const vol = $('#vol-musica');
+  vol.value = String(Math.round(musica.volumen * 100));
+  vol.addEventListener('input', () => { musica.volumen = vol.value / 100; });
   // La música arranca con el primer toque (los navegadores no permiten sonido antes de un gesto del usuario).
   const iniciarMusica = () => musica.arrancar();
   document.addEventListener('pointerdown', iniciarMusica, { once: true });

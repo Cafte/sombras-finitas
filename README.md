@@ -139,5 +139,6 @@ caché y **recarga con el servidor apagado** (juego y progreso intactos); sin de
 `js/ui/musica.js` genera la música con Web Audio (sin archivos: funciona sin conexión y nunca se repite igual). Ambiente de sigilo en re menor: zumbido grave, acordes lentos Dm · B♭ · Gm · A (la dominante mayor como destello dorado), notas sueltas tipo campana con eco y, cuando sube la **tensión**, un latido «lub-dub» que se acelera. La tensión depende del juego (`JuegoUI.actualizarTension`): guardias despiertos cerca del jugador y campana a punto de sonar; en los menús es 0.
 
 - Arranca con el primer toque (política de autoplay de los navegadores) y se pausa al ocultar la app.
+- **Volumen:** deslizador en la pantalla de inicio y en el menú de pausa (por defecto 85 %, ganancia máxima 0,6 para no saturar; se recuerda en `sf-musica-vol`).
 - Botón ♫ en la pantalla de inicio y opción «Silenciar música» en la pausa; se recuerda en `localStorage` (`sf-musica`). Es independiente de los efectos de sonido.
 - Verificada renderizando 40 s sin conexión (sin NaN, pico ≤ 0,5); el gusto musical solo se puede juzgar escuchándola. Pruebas de afinación, escala y melodía en `pruebas/musica.test.mjs`.

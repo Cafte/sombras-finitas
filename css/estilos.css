@@ -268,3 +268,9 @@ kbd { font: .78rem var(--mono); border: 1px solid var(--line); border-bottom-wid
 
 .inicio-botones { display: flex; gap: 8px; }
 #btn-musica svg, #btn-sonido svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Control de volumen de la música */
+.inicio-vol { position: relative; display: flex; align-items: center; gap: 10px; justify-content: flex-end; padding: 0 16px; font-size: .74rem; color: var(--muted); }
+.inicio-vol input[type="range"], .vol-pausa input[type="range"] { accent-color: var(--gold); width: min(46%, 180px); height: 28px; cursor: pointer; touch-action: pan-y; }
+.vol-pausa { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; font-size: .85rem; color: var(--muted); }
+.vol-pausa input[type="range"] { width: 50%; }

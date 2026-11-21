@@ -2,7 +2,7 @@
 // Ejecutar: node --test pruebas/musica.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mtof, ACORDES, elegirNota, BPM, BEAT } from '../js/ui/musica.js';
+import { mtof, ACORDES, elegirNota, BPM, BEAT, ganancia, GANANCIA_MAX, VOLUMEN_INICIAL } from '../js/ui/musica.js';
 
 test('Música — afinación: La4 = 440 Hz y una octava duplica la frecuencia', () => {
   assert.equal(mtof(69), 440);
@@ -38,4 +38,15 @@ test('Música — la melodía avanza por pasos cortos dentro del acorde (paseo a
       ant = n;
     }
   }
+});
+
+test('Música — volumen: 0 silencia, 1 es el máximo, la curva es creciente y el valor inicial es audible', () => {
+  assert.equal(ganancia(0), 0);
+  assert.equal(ganancia(1), GANANCIA_MAX);
+  assert.equal(ganancia(2), GANANCIA_MAX, 'se limita a 1');
+  assert.equal(ganancia(-1), 0, 'se limita a 0');
+  let ant = -1;
+  for (let v = 0; v <= 1.0001; v += 0.05) { const g = ganancia(v); assert.ok(g > ant); ant = g; }
+  assert.ok(ganancia(VOLUMEN_INICIAL) > 0.4, 'más fuerte que la versión anterior (0,22)');
+  assert.ok(GANANCIA_MAX <= 0.6, 'tope para no saturar');
 });

@@ -1,6 +1,6 @@
 // Service Worker: caché de la aplicación y funcionamiento sin conexión (RNF01).
 // Al publicar una nueva versión, cambiar VERSION para que los celulares descarguen los archivos actualizados.
-const VERSION = 'v10';
+const VERSION = 'v11';
 const CACHE = 'sombras-finitas-' + VERSION;
 const ARCHIVOS = [
   './', './index.html', './manifest.webmanifest', './css/estilos.css', './data/niveles.json',

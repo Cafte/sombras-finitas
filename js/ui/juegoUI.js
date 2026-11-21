@@ -259,7 +259,10 @@ export class JuegoUI {
     if (!this.partida || this.partida.estado !== 'jugando') return;
     this.ctx.modal({
       titulo: 'Pausa',
-      cuerpo: [`Nivel ${this.nivel.numero} · ${this.nivel.nombre}`, h('br'), this.nivel.historia],
+      cuerpo: [`Nivel ${this.nivel.numero} · ${this.nivel.nombre}`, h('br'), this.nivel.historia,
+        h('label', { class: 'vol-pausa' }, 'Volumen de la música',
+          h('input', { type: 'range', min: '0', max: '100', step: '5', value: String(Math.round(musica.volumen * 100)), 'aria-label': 'Volumen de la música',
+            oninput: e => { musica.volumen = e.target.value / 100; } }))],
       acciones: [
         { texto: 'Continuar', primario: true },
         { texto: 'Abrir cuaderno', onclick: () => this.ctx.abrirCuaderno() },
