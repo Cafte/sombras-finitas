@@ -11,17 +11,31 @@ const n4 = niveles[3];
 
 test('Patrulla — solo el nivel 4 tiene guardias con ruta', () => {
   for (const n of niveles.slice(0, 3)) assert.ok(n.crearGuardias().every(g => g.ruta === null), `nivel ${n.numero}`);
-  assert.ok(n4.crearGuardias().every(g => g.ruta && g.ruta.length === 3));
+  const [A, B, C] = n4.crearGuardias();
+  assert.equal(A.ruta.length, 3); assert.equal(C.ruta.length, 3);
+  assert.equal(B.ruta.length, 7, 'B patrulla de lado, con otro recorrido');
 });
 
 test('Patrulla — las rutas del nivel 4 son transitables y no se cruzan entre guardias', () => {
   const vistas = new Set();
-  for (const g of n4.crearGuardias()) for (const c of g.ruta) {
-    assert.notEqual(n4.celdas[c.y][c.x], '#');
-    const k = c.x + ',' + c.y;
-    assert.equal(vistas.has(k), false, 'casilla compartida ' + k);
-    vistas.add(k);
+  for (const g of n4.crearGuardias()) {
+    const propias = new Set(g.ruta.map(c => c.x + ',' + c.y));
+    for (const c of g.ruta) assert.notEqual(n4.celdas[c.y][c.x], '#');
+    for (const k of propias) { assert.equal(vistas.has(k), false, 'casilla compartida ' + k); vistas.add(k); }
   }
+});
+
+test('Patrulla — A y C se mueven a la vez y de la misma forma; B se mueve distinto', () => {
+  const [A, B, C] = n4.crearGuardias();
+  for (let i = 0; i < 8; i++) {
+    A.patrullar(); B.patrullar(); C.patrullar();
+    assert.equal(A.y, C.y, 'A y C van sincronizados (paso ' + (i + 1) + ')');
+    assert.equal(A.x, 3); assert.equal(C.x, 9);   // recorren su columna
+    assert.equal(B.y, 1);                          // B solo se desplaza por su fila
+  }
+  const xs = []; B.reiniciar();
+  for (let i = 0; i < 12; i++) { B.patrullar(); xs.push(B.x); }
+  assert.deepEqual(xs, [5, 4, 5, 6, 7, 8, 7, 6, 5, 4, 5, 6]);
 });
 
 test('Patrulla — un guardia despierto va y vuelve por su ruta; uno dormido no se mueve', () => {
