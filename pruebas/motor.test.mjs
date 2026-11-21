@@ -210,13 +210,14 @@ test('RF03/RF04 — Guardia: conducta observable depende solo de aceptación; ra
 
 test('RF04 — nivel 1: detección por radio, sombra protege, dormido no detecta', () => {
   const p = new Partida(niveles[0]);
+  p.campanaRestante = 1e9;   // estas pruebas son de radio y sombras: se deja la campana fuera
   // jugador en (1,2); guardia en (5,1). Camina hasta (3,2) que es sombra
   assert.equal(p.mover('derecha').ok, true);
   assert.equal(p.mover('derecha').ok, true); // (3,2) sombra
   assert.equal(p.enSombra(), true);
   assert.equal(p.mover('derecha').resultado, 'descubierto'); // (4,2): distancia 1+1=2 con guardia despierto
   assert.equal(p.estado, 'descubierto');
-  p.reaparecer();
+  p.reaparecer(); p.campanaRestante = 1e9;
   p.mover('derecha'); p.mover('derecha');
   assert.equal(p.senal('a').resultado, null); // dormido, en sombra
   for (let i = 0; i < 6; i++) { const r = p.mover('derecha'); assert.ok(r.ok || r.motivo === 'salida-sellada'); }
@@ -225,6 +226,7 @@ test('RF04 — nivel 1: detección por radio, sombra protege, dormido no detecta
 
 test('RF04 — la salida está sellada hasta validar; con salida abierta se gana', () => {
   const p = new Partida(niveles[0]);
+  p.campanaRestante = 1e9;   // sin campana: aquí solo se prueba la salida sellada
   p.mover('derecha'); p.mover('derecha'); p.senal('a');
   let ultimo;
   for (let i = 0; i < 20; i++) { ultimo = p.mover('derecha'); if (!ultimo.ok) break; }

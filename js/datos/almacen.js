@@ -178,6 +178,7 @@ export class Almacen {
         });
       }
     }
+    await this.normalizarBloqueos();
     return this.perfil;
   }
 
@@ -250,10 +251,18 @@ export class Almacen {
     try { return JSON.parse(p?.pares_resueltos ?? '{}'); } catch { return {}; }
   }
 
-  // Solo para pruebas: deja todos los niveles bloqueados como «en curso» (no marca ninguno como superado).
-  async desbloquearTodo() {
+  // Coherencia del avance: solo puede estar «en curso» el primer nivel sin superar; los siguientes, bloqueados.
+  // Corrige datos antiguos (p. ej. niveles abiertos con un enlace de prueba) sin tocar los niveles ya superados.
+  async normalizarBloqueos() {
+    const niveles = (await this.b.todos('nivel')).sort((a, b) => a.numero - b.numero);
     const prog = await this.b.porIndice('progreso', 'id_perfil', this.perfil.id_perfil);
-    for (const p of prog) if (p.estado === 'bloqueado') { p.estado = 'en_curso'; await this.b.put('progreso', p); }
+    const porNivel = new Map(prog.map(p => [p.id_nivel, p]));
+    const primero = niveles.find(n => porNivel.get(n.id_nivel)?.estado !== 'superado');
+    if (!primero) return;
+    for (const n of niveles) {
+      const p = porNivel.get(n.id_nivel);
+      if (p && n.numero > primero.numero && p.estado === 'en_curso') { p.estado = 'bloqueado'; await this.b.put('progreso', p); }
+    }
   }
 
   async _dibujoDe(idNivel) {

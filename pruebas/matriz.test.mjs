@@ -115,10 +115,23 @@ test('PF13 — progreso, diagrama y respuestas de equivalencia se conservan al r
   assert.deepEqual(await b.cargarPares(1), {});
 });
 
-test('Prueba — desbloquearTodo abre los niveles sin marcarlos como superados', async () => {
-  const a = await Almacen.abrir({ forzarMemoria: true, nombre: 'desb-' + Math.random() });
+test('Bloqueos — datos antiguos con niveles abiertos de más se vuelven a bloquear sin tocar los superados', async () => {
+  const a = await Almacen.abrir({ forzarMemoria: true, nombre: 'bloq-' + Math.random() });
   await a.inicializar(datos);
-  assert.equal((await a.niveles())[3].estado, 'bloqueado');
-  await a.desbloquearTodo();
+  // Simula un enlace de prueba antiguo: todos los niveles «en curso».
+  const prog = await a.b.todos('progreso');
+  for (const p of prog) await a.b.put('progreso', { ...p, estado: 'en_curso' });
   assert.deepEqual((await a.niveles()).map(n => n.estado), ['en_curso', 'en_curso', 'en_curso', 'en_curso', 'en_curso']);
+  await a.normalizarBloqueos();
+  assert.deepEqual((await a.niveles()).map(n => n.estado), ['en_curso', 'bloqueado', 'bloqueado', 'bloqueado', 'bloqueado']);
+
+  // Con el nivel 1 superado, el 2 queda abierto y el resto bloqueado; el nivel superado no se toca.
+  await a.marcarSuperado(1);
+  for (const p of await a.b.todos('progreso')) if (p.estado === 'bloqueado') await a.b.put('progreso', { ...p, estado: 'en_curso' });
+  await a.normalizarBloqueos();
+  assert.deepEqual((await a.niveles()).map(n => n.estado), ['superado', 'en_curso', 'bloqueado', 'bloqueado', 'bloqueado']);
+
+  // Reabrir el juego (inicializar) mantiene el avance real.
+  await a.inicializar(datos);
+  assert.deepEqual((await a.niveles()).map(n => n.estado), ['superado', 'en_curso', 'bloqueado', 'bloqueado', 'bloqueado']);
 });
