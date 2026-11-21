@@ -4,6 +4,7 @@ import { VistaMapa } from './vistaMapa.js';
 import { sonido } from './sonido.js';
 import { Partida } from '../juego/mapa.js';
 import { RADIO_DESPIERTO } from '../juego/guardia.js';
+import { predecir } from '../juego/prediccion.js';
 
 const TECLAS = { ArrowUp: 'arriba', ArrowDown: 'abajo', ArrowLeft: 'izquierda', ArrowRight: 'derecha' };
 
@@ -17,6 +18,7 @@ export class JuegoUI {
     this.previas = [];        // tandas anteriores al último reinicio de guardias
     this._cache = null;       // filas de la bitácora en el último render
     this.selBit = null;       // fila elegida { cadena, dorm }
+    this.pruebas = new Map(); // cadena -> { pred, real, ok }: lo que predijo el diagrama del estudiante vs la realidad
     $$('.obs-vista').forEach(b => b.addEventListener('click', () => { this.vistaBit = b.dataset.vista; this.renderBitacora(); }));
 
     $$('[data-mov]').forEach(b => b.addEventListener('click', () => this.mover(b.dataset.mov)));
@@ -34,13 +36,14 @@ export class JuegoUI {
   iniciar(nivel, { salidaAbierta }) {
     this.nivel = nivel;
     this.partida = new Partida(nivel);
-    this.previas = []; this._cache = null; this.selBit = null;
+    this.previas = []; this._cache = null; this.selBit = null; this.pruebas.clear();
     this.partida.salidaAbierta = salidaAbierta;
     $('#juego-titulo').textContent = `Nivel ${nivel.numero} · ${nivel.nombre}`;
     const sg = vaciar($('#juego-sigma'));
     sg.append(h('span', { class: 'mono', texto: 'Σ' }), ...nivel.alfabeto.map(a => h('span', { texto: a })));
     const fila = vaciar($('#juego-senales'));
-    nivel.alfabeto.forEach((a, i) => fila.append(h('button', {
+    if (nivel.camino) fila.append(h('p', { class: 'camino-nota', texto: 'Sin botones: tu camino es la cadena. Pisa las casillas con letra para emitir esa señal.' }));
+    else nivel.alfabeto.forEach((a, i) => fila.append(h('button', {
       type: 'button', class: 'btn-senal s' + (i % 3), 'aria-label': `Emitir señal ${a}`, onclick: () => this.senal(a, i)
     }, a, h('small', { texto: 'señal' }))));
     this.activar();
@@ -51,7 +54,34 @@ export class JuegoUI {
     this.vista.asignar(this.partida);
     this.vista.iniciar();
     this.renderBitacora();
-    this.avisar(this.partida.estado === 'jugando' ? '' : '');
+    this.renderPredicciones();
+    this.avisar('');
+  }
+
+  /* ---------- Predicción del diagrama (nivel 3) ---------- */
+  _autoEstudiante() {
+    try { return this.ctx.cuaderno ? this.ctx.cuaderno.aAutomata() : null; } catch { return null; }
+  }
+  predecir(a) { return predecir(this._autoEstudiante(), this.partida.senales, a); }
+  _guardiaObjetivo() { return this.partida.guardias.find(g => g.automata === this.nivel.automataObjetivo) ?? this.partida.guardias[0]; }
+
+  renderPredicciones() {
+    const ayuda = $('#pred-ayuda');
+    const botones = $$('#juego-senales .btn-senal');
+    if (!this.nivel.prediccion) { ayuda.hidden = true; return; }
+    let alguna = false;
+    botones.forEach((b, i) => {
+      const pr = this.predecir(this.nivel.alfabeto[i]);
+      const peq = b.querySelector('small');
+      b.classList.toggle('pred-d', pr === 'dormido'); b.classList.toggle('pred-v', pr === 'despierto');
+      peq.textContent = pr ? (pr === 'dormido' ? '→ dorm.' : '→ desp.') : 'señal';
+      b.title = pr ? `Tu diagrama predice: ${pr}` : '';
+      alguna = alguna || !!pr;
+    });
+    ayuda.hidden = false;
+    ayuda.textContent = alguna
+      ? 'Cada botón muestra lo que predice TU diagrama. Si la realidad no coincide, hay un error en tu cuaderno.'
+      : 'Completa tu diagrama en el cuaderno: entonces cada botón mostrará qué predice tu autómata.';
   }
 
   salir() { this.vista.detener(); }
@@ -70,6 +100,7 @@ export class JuegoUI {
     const p = this.partida;
     if (!p || p.estado !== 'jugando' || this.ctx.modalAbierto()) return;
     const de = { ...p.jugador };
+    const antes = p.guardias.map(g => g.dormido);
     const r = p.mover(dir);
     if (!r.ok) {
       sonido.choque();
@@ -78,20 +109,36 @@ export class JuegoUI {
     }
     this.vista.moverAnim(de, { ...p.jugador });
     sonido.paso();
+    if (r.emitio) {   // nivel «el camino es la cadena»: la casilla pisada emitió una señal
+      sonido.senal(this.nivel.alfabeto.indexOf(r.emitio));
+      const despues = p.guardias.map(g => g.dormido);
+      if (despues.some((d, k) => d && !antes[k])) setTimeout(() => sonido.dormir(), 120);
+      else if (despues.some((d, k) => !d && antes[k])) setTimeout(() => sonido.despertar(), 120);
+      this.avisar(`Casilla «${r.emitio}»: señal emitida`);
+      this.renderBitacora(true);
+    }
     this.resolver(r.resultado);
   }
 
   senal(a, i = 0) {
     const p = this.partida;
     if (!p || p.estado !== 'jugando' || this.ctx.modalAbierto()) return;
+    if (this.nivel.camino) return;   // en el nivel bonus las señales las emite el camino
+    const pred = this.nivel.prediccion ? this.predecir(a) : null;
     const antes = p.guardias.map(g => g.dormido);
     const r = p.senal(a);
     if (!r.ok) return;
+    if (pred) {
+      const real = this._guardiaObjetivo().dormido ? 'dormido' : 'despierto';
+      this.pruebas.set(p.senales, { pred, real, ok: pred === real });
+      if (pred !== real) this.avisar(`Tu diagrama predijo «${pred}» pero el guardia quedó «${real}». Revisa el cuaderno.`);
+    }
     sonido.senal(i);
     const despues = p.guardias.map(g => g.dormido);
     if (despues.some((d, k) => d && !antes[k])) setTimeout(() => sonido.dormir(), 120);
     else if (despues.some((d, k) => !d && antes[k])) setTimeout(() => sonido.despertar(), 120);
     this.renderBitacora(true);
+    this.renderPredicciones();
     this.resolver(r.resultado);
   }
 
@@ -102,6 +149,7 @@ export class JuegoUI {
     sonido.reinicio();
     this.avisar('Guardias reiniciados a q₀');
     this.renderBitacora();
+    this.renderPredicciones();
     this.resolver(r.resultado);
   }
 
@@ -171,7 +219,7 @@ export class JuegoUI {
     const c = this._cache;
     if (c && c.length > 1 && (filas.length < c.length || c.some((f, k) => k < filas.length && f.cadena !== filas[k].cadena))) {
       this.previas = [c, ...this.previas].slice(0, 2);
-      this.selBit = null;
+      this.selBit = null; this.pruebas.clear();
     }
     this._cache = filas;
 
@@ -214,7 +262,8 @@ export class JuegoUI {
         onkeydown: e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this._elegir(f.cadena, f.dorm); } }
       },
       h('td', {}, f.cadena === '' ? h('span', { class: 'tr-vacio', texto: 'inicio' }) : h('span', { class: `tr-chip s${alf.indexOf(ult) % 3} ultimo`, texto: ult })),
-      h('td', { class: 'cad' }, f.cadena === '' ? 'ε' : h('span', {}, h('span', { class: 'cad-ant', texto: antes.length > 8 ? '…' + antes.slice(-8) : antes }), h('b', { texto: ult }))),
+      h('td', { class: 'cad' }, f.cadena === '' ? 'ε' : h('span', {}, h('span', { class: 'cad-ant', texto: antes.length > 8 ? '…' + antes.slice(-8) : antes }), h('b', { texto: ult })),
+        !extra && this.pruebas.get(f.cadena) && h('span', { class: 'pred-mark ' + (this.pruebas.get(f.cadena).ok ? 'ok' : 'mal'), title: `Tu diagrama predijo «${this.pruebas.get(f.cadena).pred}»; realidad: «${this.pruebas.get(f.cadena).real}»`, texto: this.pruebas.get(f.cadena).ok ? '✓' : '⚠' })),
       ...f.dorm.map((d, k) => {
         const cambio = i > 0 && lista[i - 1].dorm[k] !== d;
         return h('td', { class: cambio && nuevo && !extra && i === lista.length - 1 ? 'pulso' : '' }, conducta(d),
@@ -228,7 +277,7 @@ export class JuegoUI {
       [...prev.keys()].reverse().slice(0, 10).forEach(i => cuerpo.append(fila(prev[i], i, prev, 'previa')));
     });
     t.append(cuerpo);
-    if (filas.length === 1 && !this.previas.length) cuerpo.prepend(h('tr', {}, h('td', { class: 'vacio', colspan: String(gs.length + 2), texto: `Envía una señal (${alf.join(', ')}) y observa cómo reaccionan.` })));
+    if (filas.length === 1 && !this.previas.length) cuerpo.prepend(h('tr', {}, h('td', { class: 'vacio', colspan: String(gs.length + 2), texto: this.nivel.camino ? 'Pisa casillas con letra y observa cómo reacciona el guardia.' : `Envía una señal (${alf.join(', ')}) y observa cómo reaccionan.` })));
   }
 
   // Vista por conducta: qué cadenas duermen o despiertan a cada guardia (las más cortas primero).
@@ -267,7 +316,8 @@ export class JuegoUI {
     vaciar(d);
     d.append(h('span', { class: 'det-txt' }, h('b', { class: 'mono', texto: `«${cadena || 'ε'}»` }), ' → ',
       gs.map((g, k) => `${g.id}: ${dorm[k] ? 'dormido' : 'despierto'}`).join(' · '),
-      h('small', { texto: ' (dormido = estado de aceptación)' })),
+      h('small', { texto: ' (dormido = estado de aceptación)' }),
+      this.pruebas.get(cadena) && h('small', { class: this.pruebas.get(cadena).ok ? 'pred-ok' : 'pred-mal', texto: this.pruebas.get(cadena).ok ? ' Tu diagrama lo predijo bien.' : ` Tu diagrama predijo «${this.pruebas.get(cadena).pred}»: no coincide.` })),
     h('button', { type: 'button', class: 'btn btn-peq', texto: 'Probar en mi cuaderno', onclick: () => this.ctx.probarEnCuaderno(cadena) }),
     h('button', { type: 'button', class: 'btn-icono det-x', 'aria-label': 'Cerrar detalle', texto: '✕', onclick: () => { this.selBit = null; this.renderBitacora(); } }));
     d.hidden = false;

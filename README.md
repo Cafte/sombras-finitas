@@ -43,10 +43,18 @@ Regenerar íconos PNG: `node tools/generar-iconos.mjs`. Al publicar una versión
 |---|---|---|---|
 | 1 | {a,b} | Deducción | AFD de 2 estados («termina en a») |
 | 2 | {a,b} | Deducción | 4 estados con **estado trampa** (`ab·a*`) |
-| 3 | {a,b,c} | Minimización | 6 estados → dibujar el **mínimo** (3); equivalente pero no mínimo se rechaza |
-| 4 | {a,b,c} | Equivalencia | Dibujar el guardia A y decidir si A≡B y A≡C (con cadena distinguidora verificada por el motor) |
+| 3 | {a,b,c} | Minimización | 6 estados → dibujar el **mínimo** (3); equivalente pero no mínimo se rechaza. Ayudas: *predicción vs realidad* y *cada señal es un turno* (los guardias patrullan) |
+| 4 | {a,b,c} | Equivalencia | Dibujar el guardia A y decidir si A≡B y A≡C (con cadena distinguidora verificada por el motor). Dos zonas con lenguajes **disjuntos**: ninguna cadena duerme a los tres a la vez |
+| 5 (bonus) | {a,b} | El camino es la cadena | Sin botones: cada casilla con letra que pisas emite esa señal; hay que elegir una ruta con un número par de «a» |
 
-**Experimento (solo nivel 4): guardias que patrullan.** Por turnos, un guardia despierto avanza un paso por su ruta (ida y vuelta, líneas punteadas en el mapa) cada vez que el jugador se mueve; uno dormido se queda quieto, de modo que el movimiento solo depende de si el estado es de aceptación y la minimización/equivalencia no cambian. Si la casilla siguiente está ocupada, el guardia espera. A y C se mueven en sincronía (de arriba abajo por su columna) y B patrulla de lado por su fila; B es el distinto a propósito, para que el movimiento no revele cuáles autómatas son equivalentes. Las rutas se definen en `data/niveles.json` (`patrullas`) y están cubiertas por `pruebas/patrulla.test.mjs`. El documento IEEE v5 todavía describe a los guardias como puestos fijos.
+**Mecánicas didácticas por nivel**
+
+- **Patrulla por turnos (niveles 3 y 4).** Un guardia despierto avanza un paso por su ruta (ida y vuelta, líneas punteadas en el mapa) y uno dormido se queda quieto, de modo que el movimiento solo depende de si el estado es de aceptación y la minimización/equivalencia no cambian. Si la casilla siguiente está ocupada, el guardia espera. Las rutas están en `data/niveles.json` (`patrullas`); en el nivel 4, A y C van en sincronía (vertical) y B de lado, a propósito, para que el movimiento no revele qué autómatas son equivalentes.
+- **Nivel 3 — predicción vs realidad y costo de señal.** Con el diagrama completo en el cuaderno, cada botón de señal muestra lo que *tu* autómata predice (`→ dorm.` / `→ desp.`); si la realidad no coincide, aparece un aviso y la bitácora marca ⚠ (✓ si coincide). Cada señal es además un turno para los guardias que patrullan, y al ganar se compara tu cadena con la más corta que duerme a todos (`Nivel.mejorCadena()`).
+- **Nivel 4 — zonas con lenguajes disjuntos.** A y B (equivalentes) duermen con cadenas que terminan en `a`; C con cadenas que terminan en `c`. Como L(A) ∩ L(C) = ∅, ninguna cadena los duerme a todos: hay que dormir la primera zona (`a`), cruzarla, y ya en el refugio dormir la segunda (`c`).
+- **Nivel 5 (bonus) — el camino es la cadena.** Sin botones: pisar una casilla con letra emite esa señal a los guardias (`camino: true`). El guardia reconoce «número par de aes» (el M1 del documento).
+
+Todos los niveles tienen solución demostrada por un solver (búsqueda en anchura sobre jugador y guardias) en `pruebas/niveles.test.mjs`. El documento IEEE v5 todavía describe a los guardias como puestos fijos y cuatro niveles.
 
 La pantalla **Diagnóstico** aplica el test inicial y final (6 preguntas equivalentes, respuestas calculadas por el motor) y
 muestra Pre, Pos y ganancia normalizada `g = (Pos − Pre)/(100 − Pre)`.
@@ -70,7 +78,7 @@ datos personales (perfil = código anónimo).
 
 ## Resultados de pruebas
 
-**Automáticas (Node, 41/41 aprobadas: 29 de motor/juego/datos + 12 de la matriz PF):** δ* y `acepta` (incl. cadena vacía y propiedad δ*(q,wa)=δ(δ*(q,w),a) exhaustiva hasta
+**Automáticas (Node, todas aprobadas: motor/juego/datos, matriz PF, patrullas y solver de niveles):** δ* y `acepta` (incl. cadena vacía y propiedad δ*(q,wa)=δ(δ*(q,w),a) exhaustiva hasta
 longitud 4 en todos los AFD), completitud, estados trampa, alcanzables, minimización (6→3 con clases esperadas), equivalencia
 (contraejemplo mínimo, simetría, contraste con fuerza bruta), validación del cuaderno (flujo alterno 2a, contraejemplo, determinismo,
 mínimo exigido), reglas del mapa (radio, sombras, paredes, salida sellada/abierta), resolubilidad de los 4 niveles, `Almacen`

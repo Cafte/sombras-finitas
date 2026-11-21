@@ -68,7 +68,8 @@ export class CuadernoUI {
     const objetivos = {
       deduccion: `Dibuja el AFD del guardia ${nivel.objetivoId}. Debe reproducir su conducta (dormido = estado de aceptación).`,
       minimizacion: `Dibuja el AFD <b>mínimo</b> equivalente al de los guardias: no uses estados de más.`,
-      equivalencia: `Dibuja el AFD del guardia ${nivel.objetivoId} y resuelve el reto de equivalencia.`
+      equivalencia: `Dibuja el AFD del guardia ${nivel.objetivoId} y resuelve el reto de equivalencia.`,
+      camino: `Dibuja el AFD del guardia ${nivel.objetivoId}. Cada casilla con letra que pisas le emite esa señal (dormido = estado de aceptación).`
     };
     const meta = $('#cuaderno-meta'); vaciar(meta);
     meta.append(...this._negrita(objetivos[nivel.tipo]));

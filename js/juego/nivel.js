@@ -21,6 +21,11 @@ export class Nivel {
       this.automatas[id] = Automata.desdeJSON({ ...o, alfabeto: this.alfabeto });
     }
     this.mapaGuardias = datos.guardias; // { simboloEnMapa: idAutomata }
+    this.ayudas = datos.ayudas ?? {};
+    this.prediccion = !!this.ayudas.prediccion;   // muestra lo que predice el diagrama del estudiante
+    this.costoSenal = !!this.ayudas.costoSenal;   // cada señal es un turno de los guardias
+    this.camino = !!datos.camino;                 // las señales las emite el camino (casillas con letra)
+    this.bonus = !!datos.bonus;
     this.patrullas = datos.patrullas ?? {}; // { simboloEnMapa: [[x, y], ...] } puntos de paso de la ruta (opcional)
     this.inicioJugador = null;
     this.salida = null;
@@ -36,6 +41,24 @@ export class Nivel {
       }
       this.celdas.push(fila);
     }
+  }
+
+  // Cadena más corta que deja dormidos a todos los guardias a la vez (null si ninguna lo logra).
+  mejorCadena() {
+    const as = Object.values(this.mapaGuardias).map(id => this.automatas[id]);
+    const ini = as.map(a => a.q0);
+    const todos = es => es.every((q, i) => as[i].F.has(q));
+    const cola = [[ini, '']], vistos = new Set([ini.join('|')]);
+    while (cola.length) {
+      const [es, w] = cola.shift();
+      if (todos(es)) return w;
+      for (const a of this.alfabeto) {
+        const n = es.map((q, i) => as[i].paso(q, a));
+        const k = n.join('|');
+        if (!vistos.has(k)) { vistos.add(k); cola.push([n, w + a]); }
+      }
+    }
+    return null;
   }
 
   get automataObjetivo() { return this.automatas[this.objetivoId]; }
@@ -70,6 +93,7 @@ export class Nivel {
 
 export const NOMBRES_RETO = {
   deduccion: 'Deducción',
+  camino: 'Bonus · el camino es la cadena',
   minimizacion: 'Minimización',
   equivalencia: 'Equivalencia'
 };

@@ -120,5 +120,5 @@ test('Prueba — desbloquearTodo abre los niveles sin marcarlos como superados',
   await a.inicializar(datos);
   assert.equal((await a.niveles())[3].estado, 'bloqueado');
   await a.desbloquearTodo();
-  assert.deepEqual((await a.niveles()).map(n => n.estado), ['en_curso', 'en_curso', 'en_curso', 'en_curso']);
+  assert.deepEqual((await a.niveles()).map(n => n.estado), ['en_curso', 'en_curso', 'en_curso', 'en_curso', 'en_curso']);
 });

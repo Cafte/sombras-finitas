@@ -29,6 +29,14 @@ function dibujarCasilla(c, tipo, x, y, s, t, abierta) {
     c.strokeStyle = '#ffffff22'; c.lineWidth = 1;
     for (let i = -s; i < s; i += 6) { c.beginPath(); c.moveTo(px + 2 + i, py + s - 2); c.lineTo(px + 2 + i + s, py + 2); c.stroke(); }
     c.save(); c.beginPath(); c.rect(px + 2, py + 2, s - 4, s - 4); c.restore();
+  } else if (tipo === 'a' || tipo === 'b' || tipo === 'c') {
+    // casilla con letra: pisarla emite esa señal (nivel «el camino es la cadena»)
+    const col = { a: '#f2c978', b: '#7fd1c7', c: '#b79af2' }[tipo];
+    c.fillStyle = col + '22'; c.fillRect(px + 2, py + 2, s - 4, s - 4);
+    c.strokeStyle = col; c.lineWidth = 1.5; c.strokeRect(px + 3, py + 3, s - 6, s - 6);
+    c.fillStyle = col; c.font = `700 ${Math.round(s * .5)}px ui-monospace, monospace`;
+    c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(tipo, px + s / 2, py + s / 2 + 1);
+    c.textAlign = 'start'; c.textBaseline = 'alphabetic';
   } else if (tipo === 'E') {
     const a = abierta ? 0.85 + 0.15 * Math.sin(t / 260) : 1;
     c.fillStyle = abierta ? `rgba(242,201,120,${0.25 * a})` : '#00000055'; c.fillRect(px + 2, py + 2, s - 4, s - 4);
@@ -67,7 +75,7 @@ export class VistaMapa {
     const n = this.partida.nivel;
     const caja = this.canvas.parentElement;
     const disp = anchoDisp ?? Math.max(240, (caja?.clientWidth || 360) - 16);
-    this.s = Math.max(24, Math.min(52, Math.floor(disp / n.ancho)));
+    this.s = Math.max(16, Math.min(52, Math.floor(disp / n.ancho)));
     const dpr = Math.min(globalThis.devicePixelRatio || 1, 3);
     this.canvas.style.width = n.ancho * this.s + 'px';
     this.canvas.style.height = n.alto * this.s + 'px';

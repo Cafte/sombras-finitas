@@ -245,3 +245,14 @@ kbd { font: .78rem var(--mono); border: 1px solid var(--line); border-bottom-wid
   .controles { padding: 4px 12px 8px; gap: 8px; } .senales { gap: 4px; } .obs { min-height: 120px; }
   .barra { padding: 4px 10px; }
 }
+
+/* Predicción del diagrama (nivel 3) y nivel bonus */
+.pred-ayuda { font-size: .74rem; color: var(--muted); line-height: 1.3; }
+.btn-senal.pred-d small { color: var(--ok); } .btn-senal.pred-v small { color: var(--red-2); }
+.btn-senal.pred-d small, .btn-senal.pred-v small { font-weight: 700; }
+.pred-mark { margin-left: 6px; font-weight: 700; } .pred-mark.ok { color: var(--ok); } .pred-mark.mal { color: var(--red-2); }
+.obs-detalle .pred-ok { color: var(--ok); } .obs-detalle .pred-mal { color: var(--red-2); }
+.camino-nota { margin: 0; padding: 8px 10px; border: 1px dashed var(--gold); border-radius: 10px; color: var(--gold-2); font-size: .82rem; line-height: 1.3; }
+
+.senales { min-width: 0; } .senales-fila .btn-senal { min-width: 0; padding-inline: 2px; }
+.pred-ayuda { overflow-wrap: anywhere; }

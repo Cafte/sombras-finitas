@@ -70,10 +70,22 @@ export class Partida {
       this.estado = 'ganado';
       return { ok: true, resultado: 'ganado' };
     }
-    // Turno de los guardias: los despiertos con ruta avanzan un paso (los dormidos se quedan quietos).
+    // Nivel «el camino es la cadena»: pisar una casilla con letra emite esa señal a todos los guardias.
+    let emitio = null;
+    const letra = this.celda(nx, ny);
+    if (this.nivel.camino && this.nivel.alfabeto.includes(letra)) {
+      this.guardias.forEach(g => g.paso(letra));
+      this.senales += letra;
+      emitio = letra;
+    }
+    const patrullaron = this._turnoGuardias();
+    return { ok: true, resultado: this._evaluar(), patrullaron, emitio };
+  }
+
+  // Turno de los guardias: los despiertos con ruta avanzan un paso (los dormidos se quedan quietos).
+  _turnoGuardias() {
     const ocupada = (x, y) => (x === this.jugador.x && y === this.jugador.y) || this.hayGuardia(x, y);
-    const patrullaron = this.guardias.filter(g => g.patrullar(ocupada)).length;
-    return { ok: true, resultado: this._evaluar(), patrullaron };
+    return this.guardias.filter(g => g.patrullar(ocupada)).length;
   }
 
   // Cada señal es un símbolo de Σ que todos los guardias procesan (δ).
@@ -82,7 +94,9 @@ export class Partida {
     if (!this.nivel.alfabeto.includes(a)) return { ok: false, motivo: 'simbolo' };
     this.guardias.forEach(g => g.paso(a));
     this.senales += a;
-    return { ok: true, resultado: this._evaluar() };
+    // Niveles con «costo de señal»: emitir una señal también es un turno para los guardias que patrullan.
+    const patrullaron = this.nivel.costoSenal ? this._turnoGuardias() : 0;
+    return { ok: true, resultado: this._evaluar(), patrullaron };
   }
 
   reiniciarGuardias() {

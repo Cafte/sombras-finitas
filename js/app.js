@@ -193,13 +193,35 @@ async function alGanar(partida) {
   sonido.victoria();
   const n = ctx.nivel;
   await ctx.almacen.marcarSuperado(n.numero);
-  const hayMas = ctx.datos.niveles.some(x => x.numero === n.numero + 1);
+  const sig = ctx.datos.niveles.find(x => x.numero === n.numero + 1);
+  const ultimoPrincipal = !n.bonus && (!sig || sig.bonus);
   const cuerpo = [`Cruzaste en ${partida.pasos} pasos.`, `Concepto dominado: ${n.concepto}`];
-  const acciones = hayMas
-    ? [{ texto: `Nivel ${n.numero + 1}`, primario: true, onclick: () => comenzarNivel(n.numero + 1) }, { texto: 'Repetir nivel', onclick: () => comenzarNivel(n.numero) }, { texto: 'Menú de niveles', onclick: () => ir('niveles') }]
-    : [{ texto: 'Responder diagnóstico final', primario: true, onclick: () => ir('diagnostico') }, { texto: 'Menú de niveles', onclick: () => ir('niveles') }, { texto: 'Repetir nivel', onclick: () => comenzarNivel(n.numero) }];
-  if (!hayMas) cuerpo.push('¡Completaste Sombras Finitas! Ya dominas la deducción, la minimización y la equivalencia de AFD.');
-  modal({ titulo: hayMas ? 'Nivel superado' : '¡Juego completado!', clase: 'victoria', cuerpo, acciones });
+  if (n.costoSenal) {   // cada señal fue un turno: se compara tu cadena con la más corta posible
+    const mejor = n.mejorCadena();
+    const usadas = partida.senales.length;
+    if (mejor !== null) {
+      cuerpo.push(usadas <= mejor.length
+        ? `¡Cadena óptima! Usaste ${usadas} señal${usadas === 1 ? '' : 'es'} en tu cruce.`
+        : `Usaste ${usadas} señales en tu cruce; la cadena más corta que duerme a todos los guardias tiene ${mejor.length}: «${mejor}». ¿Puedes lograrla?`);
+    }
+  }
+  const menu = { texto: 'Menú de niveles', onclick: () => ir('niveles') };
+  const repetir = { texto: 'Repetir nivel', onclick: () => comenzarNivel(n.numero) };
+  let acciones, titulo = 'Nivel superado';
+  if (n.bonus) {
+    titulo = '¡Bonus superado!';
+    cuerpo.push(`Tu ruta escribió «${partida.senales}»: con el número de «a» adecuado el guardia siguió dormido al pasar.`);
+    acciones = [{ ...menu, primario: true }, { texto: 'Responder diagnóstico final', onclick: () => ir('diagnostico') }, repetir];
+  } else if (ultimoPrincipal) {
+    titulo = '¡Juego completado!';
+    cuerpo.push('¡Completaste Sombras Finitas! Ya dominas la deducción, la minimización y la equivalencia de AFD.');
+    acciones = [{ texto: 'Responder diagnóstico final', primario: true, onclick: () => ir('diagnostico') }];
+    if (sig) { cuerpo.push('Hay un nivel bonus: aquí el camino que recorres es la cadena.'); acciones.push({ texto: 'Nivel bonus', onclick: () => comenzarNivel(sig.numero) }); }
+    acciones.push(menu, repetir);
+  } else {
+    acciones = [{ texto: `Nivel ${n.numero + 1}`, primario: true, onclick: () => comenzarNivel(n.numero + 1) }, repetir, menu];
+  }
+  modal({ titulo, clase: 'victoria', cuerpo, acciones });
 }
 
 async function alDescubrir(partida) {
