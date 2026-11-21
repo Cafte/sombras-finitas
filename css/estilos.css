@@ -265,3 +265,6 @@ kbd { font: .78rem var(--mono); border: 1px solid var(--line); border-bottom-wid
 .tag-campana { display: block; font-size: .62rem; color: var(--gold-2); letter-spacing: .04em; margin-top: 1px; }
 
 .mapa-aviso { white-space: normal; max-width: calc(100% - 24px); text-align: center; width: max-content; }
+
+.inicio-botones { display: flex; gap: 8px; }
+#btn-musica svg, #btn-sonido svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }

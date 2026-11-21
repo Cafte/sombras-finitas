@@ -2,6 +2,7 @@
 import { $, $$, h, vaciar } from './dom.js';
 import { VistaMapa } from './vistaMapa.js';
 import { sonido } from './sonido.js';
+import { musica } from './musica.js';
 import { Partida } from '../juego/mapa.js';
 import { RADIO_DESPIERTO } from '../juego/guardia.js';
 import { predecir } from '../juego/prediccion.js';
@@ -135,7 +136,23 @@ export class JuegoUI {
       : 'Completa tu diagrama en el cuaderno: entonces cada botón mostrará qué predice tu autómata.';
   }
 
-  salir() { this.vista.detener(); }
+  salir() { this.vista.detener(); musica.tension(0); }
+
+  // La música se tensa según el peligro: guardias despiertos cerca, campana a punto de sonar.
+  actualizarTension() {
+    const p = this.partida;
+    if (!p || !this.activo || p.estado !== 'jugando') { musica.tension(0); return; }
+    let cerca = 0, despiertos = 0;
+    for (const g of p.guardias) {
+      if (g.dormido) continue;
+      despiertos++;
+      const d = Math.abs(g.x - p.jugador.x) + Math.abs(g.y - p.jugador.y);
+      cerca = Math.max(cerca, 1 - Math.min(d, 8) / 8);
+    }
+    let t = 0.75 * cerca + 0.08 * despiertos;
+    if (this.nivel?.campana && p.campanaRestante <= 1) t += 0.15;
+    musica.tension(t);
+  }
 
   avisar(msg) {
     const a = $('#mapa-aviso');
@@ -171,6 +188,7 @@ export class JuegoUI {
     if (r.campanazo) this.campanazo(r.campanazo);
     this.ultimaAccion = performance.now();
     this.renderCampana();
+    this.actualizarTension();
     this.resolver(r.resultado);
   }
 
@@ -247,6 +265,7 @@ export class JuegoUI {
         { texto: 'Abrir cuaderno', onclick: () => this.ctx.abrirCuaderno() },
         { texto: 'Reiniciar nivel', onclick: () => { this.partida.reaparecer(); this.renderBitacora(); this.vista.anim = null; sonido.reinicio(); } },
         { texto: sonido.activo ? 'Silenciar sonido' : 'Activar sonido', onclick: () => { sonido.alternar(); this.ctx.actualizarSonido(); } },
+        { texto: musica.activa ? 'Silenciar música' : 'Activar música', onclick: () => { musica.alternar(); this.ctx.actualizarMusica(); } },
         { texto: 'Salir al menú', onclick: () => this.ctx.ir('inicio') }
       ]
     });
@@ -296,6 +315,7 @@ export class JuegoUI {
     caja.scrollTop = nuevo ? 0 : scroll;
     this._renderDetalle();
     this.renderCampana();
+    this.actualizarTension();
   }
 
   _cadenaCorta(w) { return w === '' ? 'ε' : (w.length > 9 ? '…' + w.slice(-8) : w); }

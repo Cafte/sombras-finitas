@@ -1,6 +1,6 @@
 // Service Worker: caché de la aplicación y funcionamiento sin conexión (RNF01).
 // Al publicar una nueva versión, cambiar VERSION para que los celulares descarguen los archivos actualizados.
-const VERSION = 'v9';
+const VERSION = 'v10';
 const CACHE = 'sombras-finitas-' + VERSION;
 const ARCHIVOS = [
   './', './index.html', './manifest.webmanifest', './css/estilos.css', './data/niveles.json',
@@ -8,7 +8,7 @@ const ARCHIVOS = [
   './js/motor/automata.js', './js/motor/equivalencia.js', './js/motor/minimizador.js',
   './js/juego/guardia.js', './js/juego/prediccion.js', './js/juego/nivel.js', './js/juego/mapa.js', './js/juego/diagnostico.js',
   './js/cuaderno/cuaderno.js', './js/datos/almacen.js',
-  './js/ui/dom.js', './js/ui/sonido.js', './js/ui/vistaMapa.js', './js/ui/juegoUI.js', './js/ui/cuadernoUI.js', './js/ui/diagnosticoUI.js',
+  './js/ui/dom.js', './js/ui/sonido.js', './js/ui/musica.js', './js/ui/vistaMapa.js', './js/ui/juegoUI.js', './js/ui/cuadernoUI.js', './js/ui/diagnosticoUI.js',
   './icons/icono.svg', './icons/icono-192.png', './icons/icono-512.png', './icons/icono-maskable-512.png'
 ];
 

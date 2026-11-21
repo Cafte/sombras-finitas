@@ -1,6 +1,7 @@
 // Sombras Finitas — arranque, navegación y orquestación de pantallas.
 import { $, $$, h, vaciar } from './ui/dom.js';
 import { sonido } from './ui/sonido.js';
+import { musica } from './ui/musica.js';
 import { Almacen } from './datos/almacen.js';
 import { Nivel, NOMBRES_RETO } from './juego/nivel.js';
 import { Cuaderno } from './cuaderno/cuaderno.js';
@@ -83,6 +84,19 @@ function actualizarSonido() {
   b.setAttribute('aria-pressed', String(on));
   b.setAttribute('aria-label', on ? 'Sonido activado' : 'Sonido desactivado');
   b.replaceChildren(svgSonido(on));
+}
+function actualizarMusica() {
+  const b = $('#btn-musica');
+  const on = musica.activa;
+  b.setAttribute('aria-pressed', String(on));
+  b.setAttribute('aria-label', on ? 'Música activada' : 'Música desactivada');
+  const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  s.setAttribute('viewBox', '0 0 24 24'); s.setAttribute('width', '24'); s.setAttribute('height', '24');
+  const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  p.setAttribute('d', 'M9 18V6l10-2v12M9 18a3 3 0 11-6 0 3 3 0 016 0zM19 16a3 3 0 11-6 0 3 3 0 016 0z');
+  s.append(p);
+  if (!on) { const x = document.createElementNS('http://www.w3.org/2000/svg', 'path'); x.setAttribute('d', 'M3 21L21 3'); s.append(x); }
+  b.replaceChildren(s);
 }
 function svgSonido(on) {
   const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -238,7 +252,7 @@ async function alDescubrir(partida) {
 }
 
 /* ---------- Instancias de pantallas ---------- */
-Object.assign(ctx, { ir, modal, modalAbierto, anunciar, toast, actualizarSonido, abrirCuaderno, alGanar, alDescubrir, alValidar, alResolverPares,
+Object.assign(ctx, { ir, modal, modalAbierto, anunciar, toast, actualizarSonido, actualizarMusica, abrirCuaderno, alGanar, alDescubrir, alValidar, alResolverPares,
   guardarDibujo: (ser) => ctx.almacen.guardarDibujo(ctx.nivel.numero, ser) });
 function probarEnCuaderno(cadena) {
   abrirCuaderno();
@@ -301,13 +315,19 @@ async function arrancar() {
   $('#btn-diagnostico').addEventListener('click', () => ir('diagnostico'));
   $('#btn-ayuda').addEventListener('click', () => ir('ayuda'));
   $('#btn-sonido').addEventListener('click', () => { sonido.alternar(); actualizarSonido(); });
+  $('#btn-musica').addEventListener('click', () => { musica.alternar(); actualizarMusica(); });
+  // La música arranca con el primer toque (los navegadores no permiten sonido antes de un gesto del usuario).
+  const iniciarMusica = () => musica.arrancar();
+  document.addEventListener('pointerdown', iniciarMusica, { once: true });
+  document.addEventListener('keydown', iniciarMusica, { once: true });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) musica.ocultar(); else musica.mostrar(); });
   $('#btn-cuaderno-inicio').addEventListener('click', async () => {
     const niveles = await ctx.almacen.niveles();
     const n = (niveles.find(x => x.estado === 'en_curso') ?? niveles[0]).numero;
     await comenzarNivel(n, { intro: false }); abrirCuaderno();
   });
   $('#btn-cuaderno-volver').addEventListener('click', () => { ir('juego'); evaluarSalida(); });
-  actualizarSonido(); leyenda();
+  actualizarSonido(); actualizarMusica(); leyenda();
   addEventListener('online', conexion); addEventListener('offline', conexion);
   conexion();
   await renderInicio();
