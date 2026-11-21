@@ -246,9 +246,18 @@ function leyenda() {
 async function registrarSW() {
   if (!('serviceWorker' in navigator) || !/^https?:$/.test(location.protocol)) return;
   try {
-    await navigator.serviceWorker.register('sw.js');
-    navigator.serviceWorker.addEventListener('controllerchange', conexion);
+    const teniaControl = !!navigator.serviceWorker.controller;
+    const reg = await navigator.serviceWorker.register('sw.js');
+    let recargando = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      conexion();
+      // Una versión nueva tomó el control: se recarga una vez para usar los archivos actualizados.
+      if (teniaControl && !recargando) { recargando = true; toast('Actualizando a la versión nueva…'); setTimeout(() => location.reload(), 700); }
+    });
     navigator.serviceWorker.ready.then(conexion);
+    // Buscar versiones nuevas al abrir y cada vez que se vuelve a la app.
+    reg.update().catch(() => {});
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) reg.update().catch(() => {}); });
   } catch (e) { console.warn('SW no registrado', e); }
 }
 

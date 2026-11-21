@@ -1,6 +1,6 @@
 // Service Worker: caché de la aplicación y funcionamiento sin conexión (RNF01).
 // Al publicar una nueva versión, cambiar VERSION para que los celulares descarguen los archivos actualizados.
-const VERSION = 'v3';
+const VERSION = 'v4';
 const CACHE = 'sombras-finitas-' + VERSION;
 const ARCHIVOS = [
   './', './index.html', './manifest.webmanifest', './css/estilos.css', './data/niveles.json',
@@ -13,7 +13,7 @@ const ARCHIVOS = [
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ARCHIVOS)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ARCHIVOS.map(u => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', e => {
